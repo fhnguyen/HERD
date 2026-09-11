@@ -71,7 +71,7 @@
   const LB_ALIASES = { on: 'on', yes: 'on', show: 'on', true: 'on', public: 'on',
                        off: 'off', no: 'off', hide: 'off', false: 'off',
                        coach: 'coach', coaches: 'coach', private: 'coach' };
-  const FILLER = { is: 1, better: 1, of: 1, 'time-cap': 0 };
+  const FILLER = { is: 1, better: 1, of: 1, 'time-cap': 0, '@': 1, at: 1 };
 
   const KG_PER_LB = 0.45359237;
   const CAP_TIER  = 1e7; // finishers rank above anyone who hit the cap
@@ -151,7 +151,10 @@
     for (let i = 0; i < tokens.length; i++) {
       const t = tokens[i], next = tokens[i + 1];
       let m;
-      if ((m = t.match(/^(\d+)x(\d+)?$/)) || (m = t.match(/^x(\d+)$/))) { spec.sets = +m[1]; continue; }
+      if ((m = t.match(/^(\d+)x(\d+)$/))) { spec.sets = +m[1]; spec.repsEach = +m[2]; continue; }
+      if ((m = t.match(/^(\d+)x$/)) || (m = t.match(/^x(\d+)$/))) { spec.sets = +m[1]; continue; }
+      if (/^\d+(?:[-/]\d+)+$/.test(t)) { spec.reps = t.split(/[-/]/).map(Number); continue; }
+      if ((m = t.match(/^@?(\d+(?:\.\d+)?(?:[-/]\d+(?:\.\d+)?)*)%$/))) { spec.pcts = m[1].split(/[-/]/).map(Number); continue; }
       if (/^\d+$/.test(t) && /^sets?$/.test(next || '')) { spec.sets = +t; i++; continue; }
       if (/^sets?$/.test(t) && /^\d+$/.test(next || '')) { spec.sets = +next; i++; continue; }
       if (CALCS.indexOf(t) >= 0 || CALC_ALIASES[t]) { spec.calc = CALC_ALIASES[t] || t; continue; }
@@ -176,6 +179,9 @@
     if (spec.cap && out.type !== 'time') warnings.push('cap only applies to time scores');
     if (spec.cap && out.type === 'time' && out.sets > 1) warnings.push('cap is ignored on multi-set time scores');
     if (spec.unit && out.type !== 'load') warnings.push('lb/kg only applies to load');
+    if ((spec.reps || spec.pcts) && out.type !== 'load') warnings.push('rep and % schemes only apply to load');
+    if (spec.reps && out.type === 'load' && !out.reps) warnings.push('rep scheme ' + spec.reps.join('-') + ' has ' + spec.reps.length + ' sets but the tag says ' + out.sets);
+    if (spec.pcts && out.type === 'load' && !out.pcts) warnings.push('percentages ' + spec.pcts.join('-') + '% don\u2019t match ' + out.sets + ' sets');
     out.warnings = warnings.concat(out.warnings || []);
     return out;
   }
@@ -194,9 +200,21 @@
       cap: null,
       capScore: null,
       unit: type === 'load' ? (spec.unit === 'kg' ? 'kg' : spec.unit === 'lb' ? 'lb' : DEFAULTS.loadUnit) : T.unit,
+      reps: null,   // load only: reps for each set, e.g. [4, 3, 2, 1] (shown on each input, saved with each set)
+      pcts: null,   // load only: percentage for each set, e.g. [75, 80, 85, 90] (display)
       implicit: !!spec.implicit,
       warnings: spec.warnings || [],
     };
+    if (type === 'load') {
+      let reps = Array.isArray(spec.reps) ? spec.reps.map(Number).filter(n => n > 0 && n % 1 === 0) : null;
+      const explicitSets = parseInt(spec.sets, 10) > 0;
+      if (reps && reps.length && !explicitSets) out.sets = Math.min(50, reps.length);
+      if ((!reps || !reps.length) && spec.repsEach > 0) reps = Array(out.sets).fill(+spec.repsEach);
+      out.reps = reps && reps.length === out.sets ? reps : null;
+      let p = Array.isArray(spec.pcts) ? spec.pcts.map(Number).filter(n => n > 0) : null;
+      if (p && p.length === 1 && out.sets > 1) p = Array(out.sets).fill(p[0]);
+      out.pcts = p && p.length === out.sets ? p : null;
+    }
     if (T.ranked) {
       if (spec.calcWord === 'best')  out.calc = out.sort === 'asc' ? 'min' : 'max';
       else if (spec.calcWord === 'worst') out.calc = out.sort === 'asc' ? 'max' : 'min';
@@ -212,11 +230,15 @@
   // Spec → canonical tag text (for the coach editor to write back to the sheet)
   function formatScoreTag(spec) {
     const s = normalizeSpec(spec), T = TYPES[s.type], bits = [s.type];
-    if (s.sets > 1) bits.push(s.sets + ' sets');
+    const same = a => a && a.every(x => x === a[0]);
+    if (s.reps && same(s.reps)) bits.push(s.sets + 'x' + s.reps[0]);
+    else if (s.reps) bits.push(s.reps.join('-'));
+    else if (s.sets > 1) bits.push(s.sets + ' sets');
     if (T.ranked && s.sets > 1 && s.calc !== T.calc) bits.push(s.calc);
     if (T.ranked && s.sort !== T.sort) bits.push(s.sort);
     if (s.cap) bits.push('cap ' + formatTime(s.cap) + (s.capScore === 'rr' ? ' rr' : ''));
     if (s.type === 'load' && s.unit !== DEFAULTS.loadUnit) bits.push(s.unit);
+    if (s.pcts) bits.push('@' + (same(s.pcts) ? s.pcts[0] : s.pcts.join('-')) + '%');
     return '[SCORE: ' + bits.join(', ') + ']';
   }
 
@@ -651,6 +673,8 @@
       const unit = s.unit === 'kg' || s.unit === 'lb' ? s.unit : (entry.unit === 'kg' || entry.unit === 'lb' ? entry.unit : spec.unit);
       const kg = unit === 'kg' ? v : v * KG_PER_LB;
       const out = { value: v, unit, kg: round(kg, 3), lb: round(unit === 'lb' ? v : v / KG_PER_LB, 2) };
+      if (spec.reps) out.reps = spec.reps[i];
+      if (spec.pcts) out.pct = spec.pcts[i];
       if (s.missed) out.missed = true;
       return { n: kg, missed: !!s.missed, out };
     }
@@ -659,7 +683,7 @@
 
   // ══════════════════════════════════════════════════════════════════════
   const TD = {
-    VERSION: '1.1.0', DEFAULTS, TYPES,
+    VERSION: '1.2.0', DEFAULTS, TYPES,
     parseScoreSpec, normalizeSpec, formatScoreTag, describeSpec, parseLeaderboardMode,
     parseTrainingCell, parseScoringCell, finalizeSections, parseProgramRows, parseCSV,
     isDateHeader, sheetDateToISO,
