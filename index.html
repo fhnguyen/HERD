@@ -195,9 +195,20 @@ button { cursor: pointer; background: none; border: 0; }
 }
 .card[data-state="logged"]::before { width: 100%; }
 .card[data-state="unscored"]::before { width: 100%; background: var(--line); }
-.card-hd { padding: 22px 20px 0; }
-.card-key { font-family: var(--display); font-size: 16px; letter-spacing: 2px; color: var(--accent-ink); line-height: 1; }
-.card-title { font-family: var(--display); font-weight: 400; font-size: 32px; line-height: 0.95; color: var(--ink); margin-top: 4px; letter-spacing: 0.3px; }
+.card-hd { padding: 0; }
+.card-h { margin: 0; font-weight: 400; }
+.card-toggle { display: block; position: relative; width: 100%; text-align: left; padding: 22px 56px 0 20px; color: inherit; }
+.card-key { display: block; font-family: var(--display); font-size: 16px; letter-spacing: 2px; color: var(--accent-ink); line-height: 1; }
+.card-title { display: block; font-family: var(--display); font-weight: 400; font-size: 32px; line-height: 0.95; color: var(--ink); margin-top: 4px; letter-spacing: 0.3px; }
+.card-chev { position: absolute; top: 18px; right: 12px; width: 36px; height: 36px; border-radius: 3px; transition: background .15s; }
+.card-chev::before { content: ''; position: absolute; left: 13px; top: 15px; width: 9px; height: 9px; border-left: 2.5px solid var(--ink-3); border-top: 2.5px solid var(--ink-3); transform: rotate(45deg); transition: transform .2s, top .2s; }
+.card[data-collapsed] .card-chev::before { transform: rotate(225deg); top: 10px; }
+.card-toggle:hover .card-chev { background: var(--wash); }
+.card-toggle:hover .card-chev::before { border-color: var(--ink); }
+.card-toggle:focus-visible { outline-offset: -3px; }
+.card-sum { display: none; }
+.card[data-collapsed] .card-sum:not(:empty) { display: inline-block; margin-top: 10px; font-size: 10px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--blue); background: var(--blue-soft); border: 1px solid rgba(0,68,223,0.2); border-radius: 3px; padding: 5px 9px; }
+.card[data-collapsed] .card-toggle { padding-bottom: 20px; }
 .card-text { padding: 12px 20px 20px; font-size: 15.5px; line-height: 1.65; color: var(--ink-2); white-space: pre-line; overflow-wrap: anywhere; }
 .card-text a { color: var(--blue); font-weight: 600; text-decoration: none; border-bottom: 2px solid rgba(0,68,223,0.25); }
 
@@ -426,7 +437,8 @@ dialog.sheet::backdrop { background: rgba(20,22,28,0.5); backdrop-filter: blur(2
   .nav-bar { padding: 0 28px; }
   .day-head { padding: 40px 28px 26px; }
   .day-body { padding: 26px 16px 80px; }
-  .card-hd { padding: 26px 28px 0; }
+  .card-toggle { padding: 26px 60px 0 28px; }
+  .card-chev { right: 16px; top: 22px; }
   .card-text { padding: 12px 28px 22px; }
   .card-notes { padding: 0 28px 20px; }
   .panel { padding: 18px 28px 24px; }
@@ -613,7 +625,7 @@ function toast(msg, kind) { const t = $('#toast'); t.textContent = msg; t.datase
 const S = {
   api: null, db: null, day: todayISO(), dayData: null, cal: [], my: { scores: {}, feel: null },
   profile: null, settings: {}, editing: {}, drafts: {}, pendingKey: null, justLogged: null, loadSeq: 0,
-  board: null, notesOpen: {},
+  board: null, notesOpen: {}, collapsed: {},
 };
 const signedIn = () => S.api && S.api.isSignedIn();
 const isCoach = () => !!(S.profile && S.profile.role === 'coach');
@@ -745,6 +757,7 @@ async function loadDay(iso, keepDrafts) {
   }
   S.loading = false;
   S.dayData = dayR.data;
+  if (S.pendingKey) delete S.collapsed[iso + '-' + S.pendingKey];
   S.cal = calR.data || [];
   S.my = myR.data || { scores: {}, feel: null };
   renderWeek();
@@ -887,6 +900,24 @@ function boardVisible(sec) {
   return sec.leaderboard === 'on' || isCoach();
 }
 
+// What a collapsed card shows under its title
+function cardSummary(sec, row) {
+  if (!row) return '';
+  if (sec.score.type === 'check') return '✓ Done';
+  if (sec.score.type === 'text' || sec.score.type === 'emoji') return '✓ Logged';
+  return '✓ ' + row.display;
+}
+
+function toggleCard(btn) {
+  const card = btn.closest('.card'); if (!card) return;
+  const collapse = btn.getAttribute('aria-expanded') === 'true';
+  S.collapsed[S.day + '-' + card.dataset.key] = collapse;
+  if (collapse) card.querySelectorAll('.video-btn[aria-expanded="true"]').forEach(toggleVideo);   // don't leave a hidden video playing
+  card.toggleAttribute('data-collapsed', collapse);
+  btn.setAttribute('aria-expanded', String(!collapse));
+  const body = card.querySelector('.card-body'); if (body) body.hidden = collapse;
+}
+
 function cardHTML(sec, i) {
   const spec = sec.score;
   const scored = spec.type !== 'none';
@@ -905,11 +936,16 @@ function cardHTML(sec, i) {
       (boardVisible(sec) ? '<button class="text-btn" data-act="board">Leaderboard</button>' : '') + '</div></div>';
   }
 
-  return '<article class="card" data-key="' + esc(sec.key) + '" data-slot="' + esc(slot.id) + '" data-state="' + state + '" style="--accent:' + ACCENTS[i % 4][0] + ';--accent-ink:' + ACCENTS[i % 4][1] + '">' +
-    '<div class="card-hd"><div class="card-key">' + esc(sec.key) + '</div><h3 class="card-title">' + esc(sec.title || 'Section ' + sec.key) + '</h3></div>' +
-    (body ? '<div class="card-text">' + linkify(esc(body)) + '</div>' : '<div style="height:18px"></div>') +
-    (S.dayData && S.dayData.coach_notes && S.dayData.coach_notes[sec.key] ? '<div class="card-notes">' + notesHTML(S.day + '-' + sec.key, S.dayData.coach_notes[sec.key], 'Coach’s notes') + '</div>' : '') +
-    panel + '</article>';
+  const collapsed = !!S.collapsed[S.day + '-' + sec.key];
+  const bodyId = 'cb-' + S.day + '-' + sec.key;
+  return '<article class="card" data-key="' + esc(sec.key) + '" data-slot="' + esc(slot.id) + '" data-state="' + state + '"' + (collapsed ? ' data-collapsed' : '') + ' style="--accent:' + ACCENTS[i % 4][0] + ';--accent-ink:' + ACCENTS[i % 4][1] + '">' +
+    '<div class="card-hd"><h3 class="card-h"><button type="button" class="card-toggle" data-act="collapse" aria-expanded="' + !collapsed + '" aria-controls="' + esc(bodyId) + '">' +
+      '<span class="card-key">' + esc(sec.key) + '</span><span class="card-title">' + esc(sec.title || 'Section ' + sec.key) + '</span>' +
+      '<span class="card-sum">' + esc(cardSummary(sec, row)) + '</span><span class="card-chev" aria-hidden="true"></span></button></h3></div>' +
+    '<div class="card-body" id="' + esc(bodyId) + '"' + (collapsed ? ' hidden' : '') + '>' +
+      (body ? '<div class="card-text">' + linkify(esc(body)) + '</div>' : '<div style="height:18px"></div>') +
+      (S.dayData && S.dayData.coach_notes && S.dayData.coach_notes[sec.key] ? '<div class="card-notes">' + notesHTML(S.day + '-' + sec.key, S.dayData.coach_notes[sec.key], 'Coach’s notes') + '</div>' : '') +
+      panel + '</div></article>';
 }
 
 function setChips(row) {
@@ -1093,10 +1129,12 @@ function rerenderCard(key) {
   const tmp = document.createElement('div'); tmp.innerHTML = cardHTML(sec, allSections().indexOf(sec));
   const fresh = tmp.firstChild;
   card.dataset.state = fresh.dataset.state;
-  const oldPanel = card.querySelector(':scope > .panel'), newPanel = fresh.querySelector(':scope > .panel');
+  const sum = card.querySelector('.card-sum'), freshSum = fresh.querySelector('.card-sum');
+  if (sum && freshSum) sum.textContent = freshSum.textContent;
+  const oldPanel = card.querySelector('.card-body > .panel'), newPanel = fresh.querySelector('.card-body > .panel');
   if (oldPanel && newPanel) oldPanel.replaceWith(newPanel);
   else if (oldPanel) oldPanel.remove();
-  else if (newPanel) card.appendChild(newPanel);
+  else if (newPanel) card.querySelector('.card-body').appendChild(newPanel);
 }
 
 function animateLogged(key) {
@@ -1155,6 +1193,7 @@ async function onEntryClick(e) {
     case 'retry': return loadDay(S.day);
     case 'today': location.hash = todayISO(); return;
     case 'video': return toggleVideo(t);
+    case 'collapse': return toggleCard(t);
     case 'notes': {
       const id = t.dataset.notes, panel = document.getElementById('notes-' + id), open = t.getAttribute('aria-expanded') !== 'true';
       S.notesOpen[id] = open; t.setAttribute('aria-expanded', String(open)); if (panel) panel.hidden = !open;
