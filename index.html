@@ -1652,15 +1652,10 @@ function renderProfile() {
       '<ul class="people" id="people-list"><li class="empty">Loading</li></ul></section>';
   }
   if (isCoach()) {
-    const t = todayISO(), first = t.slice(0, 8) + '01';
-    const ranked = Object.keys(TD.TYPES).filter(k => TD.TYPES[k].ranked || k === 'check');
     const pda = S.settings.public_days_ahead;
     const opts = [[null, 'Everything'], [0, 'Today'], [1, '+1 day'], [7, '+7 days']];
-    h += '<section class="sheet-section"><h3>Export scores</h3><p>One row per set, with pounds and kilograms side by side.</p>' +
-      '<div class="two"><label class="field"><span>From</span><input class="input" type="date" id="ex-from" value="' + first + '"></label>' +
-      '<label class="field"><span>To</span><input class="input" type="date" id="ex-to" value="' + t + '"></label></div>' +
-      '<div class="two"><label class="field"><span>Score type</span><select class="input" id="ex-type"><option value="">All types</option>' + ranked.map(k => '<option value="' + k + '">' + esc(TD.TYPES[k].label) + '</option>').join('') + '</select></label>' +
-      '<label class="field"><span>Workout name contains</span><input class="input" id="ex-title" placeholder="e.g. squat"></label></div>' +
+    h += '<section class="sheet-section"><h3>Export results</h3><p>Everyone’s results for one day: workout, athlete, gender, result, and RX/Scaled. The Excel file has an “All results” tab plus a tab for each workout.</p>' +
+      '<label class="field"><span>Day</span><input class="input" type="date" id="ex-day" value="' + esc(S.day) + '" max="' + esc(addDays(todayISO(), 365)) + '"></label>' +
       '<div class="entry-acts"><button class="btn-primary btn-sm" data-export="xlsx" type="button">Download Excel</button><button class="btn-ghost btn-sm" data-export="csv" type="button">Download CSV</button></div>' +
       '<p class="err" id="ex-err" role="alert"></p></section>' +
       '<section class="sheet-section"><h3>What visitors can see</h3><p>How far ahead people without an account can see programming. Members always see everything that’s published.</p>' +
@@ -1802,21 +1797,22 @@ async function loadWarnings() {
 
 async function runExport(kind, btn) {
   const err = $('#ex-err'); err.textContent = '';
-  const from = $('#ex-from').value, to = $('#ex-to').value;
-  if (!from || !to || from > to) { err.textContent = 'Pick a start date on or before the end date.'; return; }
+  const day = $('#ex-day').value;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) { err.textContent = 'Pick a day to export.'; return; }
+  const label = fmt(day, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
   btn.disabled = true;
-  const r = await S.api.exportRows(from, to, { scoreType: $('#ex-type').value || undefined, titleContains: $('#ex-title').value.trim() || undefined });
-  if (r.error) { btn.disabled = false; err.textContent = r.error.message; return; }
-  if (!r.data.length) { btn.disabled = false; err.textContent = 'No scores match those filters.'; return; }
-  const name = 'scores-' + from + '-to-' + to;
+  const r = await S.api.exportDay(day);
+  if (r.error) { btn.disabled = false; err.textContent = r.error.message || 'The export didn’t work. Try again.'; return; }
+  if (!r.data.length) { btn.disabled = false; err.textContent = 'No results were logged on ' + label + '.'; return; }
+  const name = 'HERD results ' + day;
   try {
     if (kind === 'xlsx') {
       if (!window.XLSX) await loadScript(CONFIG.XLSX_URL);
-      downloadXlsx(window.XLSX, r.data, name + '.xlsx');
-    } else downloadCsv(r.data, name + '.csv');
-    toast('Exported ' + r.data.length + ' rows');
+      downloadDayXlsx(window.XLSX, r.data, name + '.xlsx');
+    } else downloadDayCsv(r.data, name + '.csv');
+    toast('Exported ' + r.data.length + (r.data.length === 1 ? ' result' : ' results'));
   } catch (e) {
-    downloadCsv(r.data, name + '.csv');
+    downloadDayCsv(r.data, name + '.csv');
     toast('Excel unavailable, downloaded CSV');
   }
   btn.disabled = false;
