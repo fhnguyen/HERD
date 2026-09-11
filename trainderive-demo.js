@@ -49,8 +49,8 @@
 
     // ── People ──
     const profiles = {};
-    [['Maria Lopez', 'Women'], ['Jake Turner', 'Men'], ['Priya Shah', 'Women'], ['Marcus Reed', 'Men'], ['Hannah Cole', 'Women'],
-     ['Diego Alvarez', 'Men'], ['Tessa Nguyen', 'Women'], ['Chris Park', 'Men'], ['Lauren Mills', 'Women']].forEach(([n, d], i) => {
+    [['Maria Lopez', 'Female'], ['Jake Turner', 'Male'], ['Priya Shah', 'Female'], ['Marcus Reed', 'Male'], ['Hannah Cole', 'Female'],
+     ['Diego Alvarez', 'Male'], ['Tessa Nguyen', 'Female'], ['Chris Park', 'Male'], ['Lauren Mills', 'Female']].forEach(([n, d], i) => {
       const id = 'athlete-' + i;
       profiles[id] = { id, display_name: n, division: d, role: 'athlete', unit_pref: 'lb', avatar_url: null, email: n.toLowerCase().replace(/\s+/g, '.') + '@example.com' };
     });
@@ -80,7 +80,7 @@
 
     // ── Seed results for past days and today ──
     const fakeEntry = (spec, p, title) => {
-      const men = p.division === 'Men', level = rand() < 0.75 ? 'rx' : 'scaled';
+      const men = p.division === 'Male', level = rand() < 0.75 ? 'rx' : 'scaled';
       const s = TD.normalizeSpec(spec), n = s.sets;
       const t = (title || '').toLowerCase();
       switch (s.type) {
@@ -136,9 +136,9 @@
     const member = fn => function () { return userId ? fn.apply(null, arguments) : Promise.resolve({ data: null, error: AUTH }); };
     const emit = event => listeners.forEach(fn => fn(event, userId ? { user: { id: userId } } : null));
 
-    function signInAs(email, name) {
+    function signInAs(email, name, division) {
       const id = /coach/i.test(email) ? 'coach-1' : 'demo-' + email.toLowerCase();
-      if (!profiles[id]) profiles[id] = { id, display_name: name || email.split('@')[0], division: null, role: 'athlete', unit_pref: 'lb', avatar_url: null, email: email.toLowerCase(), created_at: new Date().toISOString() };
+      if (!profiles[id]) profiles[id] = { id, display_name: name || email.split('@')[0], division: division || null, role: 'athlete', unit_pref: 'lb', avatar_url: null, email: email.toLowerCase(), created_at: new Date().toISOString() };
       userId = id;
       emit('SIGNED_IN');
       return { user: { id, email } };
@@ -151,10 +151,10 @@
       setUserId: id => { userId = id || null; },
       isSignedIn: () => !!userId,
 
-      signUp: (email, password, displayName) => {
+      signUp: (email, password, displayName, redirectTo, captchaToken, division) => {
         if (!/^\S+@\S+\.\S+$/.test(email || '')) return fail('Enter a valid email address');
         if (String(password || '').length < 8) return fail('Use at least 8 characters for your password');
-        return ok(Object.assign(signInAs(email, displayName), { session: {} }));
+        return ok(Object.assign(signInAs(email, displayName, division), { session: {} }));
       },
       signIn: (email, password) => {
         if (!/^\S+@\S+\.\S+$/.test(email || '') || !password) return fail('Enter your email and password');
