@@ -1121,7 +1121,7 @@ function editorHTML(slot) {
     ? '<label class="cap-toggle"><input type="checkbox" data-act="capped"' + (d.capped ? ' checked' : '') + '> ' + (slot.own ? 'I hit' : 'Hit') + ' the <b>' + esc(TD.formatTime(spec.cap)) + '</b> cap</label>' : '';
 
   return top + cells + capToggle +
-    '<label class="field"><span>Notes (optional)</span><textarea class="input" data-f="notes" rows="2" placeholder="Scaling, how it felt, what to try next time">' + esc(d.notes) + '</textarea></label>' +
+    '<label class="field"><span>Notes (optional)</span><textarea class="input" data-f="notes" rows="3" placeholder="More workout details, modifications, how things felt, what to try next time, etc.">' + esc(d.notes) + '</textarea></label>' +
     acts(row ? 'Save changes' : slot.own ? 'Save score' : 'Add result');
 }
 
