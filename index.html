@@ -189,8 +189,6 @@ button { cursor: pointer; background: none; border: 0; }
 .card-hd { padding: 22px 20px 0; }
 .card-key { font-family: var(--display); font-size: 16px; letter-spacing: 2px; color: var(--accent-ink); line-height: 1; }
 .card-title { font-family: var(--display); font-weight: 400; font-size: 32px; line-height: 0.95; color: var(--ink); margin-top: 4px; letter-spacing: 0.3px; }
-.card-fmt { font-size: 9.5px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; color: var(--accent-ink); margin-top: 8px; }
-.card[data-state="unscored"] .card-fmt { color: var(--ink-3); }
 .card-text { padding: 12px 20px 20px; font-size: 15.5px; line-height: 1.65; color: var(--ink-2); white-space: pre-line; overflow-wrap: anywhere; }
 .card-text a { color: var(--blue); font-weight: 600; text-decoration: none; border-bottom: 2px solid rgba(0,68,223,0.25); }
 
@@ -223,8 +221,7 @@ button { cursor: pointer; background: none; border: 0; }
 .note a { color: var(--blue); font-weight: 600; text-decoration: none; border-bottom: 2px solid rgba(0,68,223,0.25); }
 .panel { border-top: 1px solid var(--line); background: #FAFBFE; padding: 16px 20px 20px; }
 .panel-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
-.panel.panel--visitor { padding-top: 8px; padding-bottom: 8px; background: var(--paper); }
-.panel--visitor .text-btn { padding: 10px 0; text-align: left; line-height: 1.5; }
+.panel.panel--closed { background: var(--paper); padding-top: 14px; padding-bottom: 16px; }
 
 /* Logged score */
 .logged { display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; align-items: end; }
@@ -403,7 +400,7 @@ dialog.sheet::backdrop { background: rgba(20,22,28,0.5); backdrop-filter: blur(2
   .card-text { padding: 12px 28px 22px; }
   .card-notes { padding: 0 28px 20px; }
   .panel { padding: 18px 28px 24px; }
-  .panel.panel--visitor { padding: 8px 28px; }
+  .panel.panel--closed { padding: 16px 28px 18px; }
   .plain-card { padding: 26px 28px; }
   .card-title { font-size: 36px; }
   .week-bar { margin-top: 28px; }
@@ -495,8 +492,9 @@ dialog.sheet::backdrop { background: rgba(20,22,28,0.5); backdrop-filter: blur(2
    Leave SUPABASE_URL blank to run on demo data.
    ══════════════════════════════════════════════════════ */
 const CONFIG = {
+  // Paste your two values INSIDE the quotes, keeping the comma. Anything after // is ignored.
   SUPABASE_URL: 'https://bcosjjutxkgrtekomsmr.supabase.co',
-  SUPABASE_KEY: 'sb_publishable_D1xfxHK1GFgiMGJhcv2ezA_EkpdUzpb',    
+  SUPABASE_KEY: 'sb_publishable_D1xfxHK1GFgiMGJhcv2ezA_EkpdUzpb',
   APP_NAME: 'HERD | WESTWOOD',     // browser tab + nav wordmark; the words on each side of | get the two brand colors
   LOGO_URL: '',                     // optional image for the nav; the wordmark shows when blank
   // Header background, currently the group photo from the Throwdown page. Replace, or set to '' for none.
@@ -619,7 +617,7 @@ async function boot() {
     S.api = TrainDeriveDemo(TD);
     S.api.onAuthChange(onAuthChange);
     const bar = $('#demo-bar');
-    bar.innerHTML = '<div class="col"><b>Demo data.</b> Sign in with any email to log scores. Use an email containing “coach” to see coach tools.</div>';
+    bar.innerHTML = '<div class="col"><b>Demo data.</b> ' + (location.protocol === 'file:' || /herd-westwood-preview/.test(location.pathname) ? '' : 'Not connected to Supabase: SUPABASE_URL or SUPABASE_KEY is blank in index.html. ') + 'Sign in with any email to log scores. Use an email containing “coach” to see coach tools.</div>';
     bar.hidden = false;
   }
 
@@ -853,18 +851,17 @@ function cardHTML(sec, i) {
   const row = slot.row();
   const state = !scored ? 'unscored' : row ? 'logged' : 'open';
   const body = (sec.text || '').split('\n').slice(1).join('\n').trim();
-  const fmtLine = !scored ? 'No score' : spec.implicit ? 'Notes' : TD.describeSpec(spec);
 
   let panel = '';
   if (scored) {
-    if (!signedIn()) panel = '<div class="panel panel--visitor"><button class="text-btn" data-act="auth" data-mode="signin">Sign in to log your score</button></div>';
-    else if (row && !S.editing[slot.id]) panel = '<div class="panel">' + loggedHTML(slot) + '</div>';
-    else panel = '<div class="panel">' + editorHTML(slot) + '</div>';
+    if (!signedIn()) panel = '<div class="panel panel--closed"><button class="btn-ghost btn-sm" data-act="auth" data-mode="signin">Log score</button></div>';
+    else if (S.editing[slot.id]) panel = '<div class="panel">' + editorHTML(slot) + '</div>';
+    else if (row) panel = '<div class="panel">' + loggedHTML(slot) + '</div>';
+    else panel = '<div class="panel panel--closed"><button class="btn-ghost btn-sm" data-act="edit">Log score</button></div>';
   }
 
   return '<article class="card" data-key="' + esc(sec.key) + '" data-slot="' + esc(slot.id) + '" data-state="' + state + '" style="--accent:' + ACCENTS[i % 4][0] + ';--accent-ink:' + ACCENTS[i % 4][1] + '">' +
-    '<div class="card-hd"><div class="card-key">' + esc(sec.key) + '</div><h3 class="card-title">' + esc(sec.title || 'Section ' + sec.key) + '</h3>' +
-    '<div class="card-fmt">' + esc(fmtLine) + '</div></div>' +
+    '<div class="card-hd"><div class="card-key">' + esc(sec.key) + '</div><h3 class="card-title">' + esc(sec.title || 'Section ' + sec.key) + '</h3></div>' +
     (body ? '<div class="card-text">' + linkify(esc(body)) + '</div>' : '<div style="height:18px"></div>') +
     (S.dayData && S.dayData.coach_notes && S.dayData.coach_notes[sec.key] ? '<div class="card-notes">' + notesHTML(S.day + '-' + sec.key, S.dayData.coach_notes[sec.key], 'Coach’s notes') + '</div>' : '') +
     panel + '</article>';
@@ -946,20 +943,22 @@ function editorHTML(slot) {
   const err = '<p class="err" data-err role="alert"></p>';
   const acts = label => '<div class="entry-acts"><button class="btn-primary btn-sm" data-act="save">' + label + '</button>' +
     (slot.own
-      ? (row ? '<button class="text-btn text-btn--quiet" data-act="cancel">Cancel</button><button class="text-btn text-btn--danger" data-act="remove">Remove score</button>' : '')
+      ? '<button class="text-btn text-btn--quiet" data-act="cancel">Cancel</button>' + (row ? '<button class="text-btn text-btn--danger" data-act="remove">Remove score</button>' : '')
       : '<button class="text-btn text-btn--quiet" data-act="cancel">Cancel</button>' + (row ? '<button class="text-btn text-btn--danger" data-act="remove">Delete result</button>' : '')) +
     '</div>' + err;
 
   if (spec.type === 'check') {
     return '<div class="panel-row"><button class="btn-primary btn-sm" data-act="check">Mark as done</button>' +
       (slot.own && boardVisible(sec) ? '<button class="text-btn" data-act="board">See who’s done it</button>' : '') +
+      (slot.own ? '<button class="text-btn text-btn--quiet" data-act="cancel">Cancel</button>' : '') +
       (!slot.own && row ? '<button class="text-btn text-btn--danger" data-act="remove">Delete result</button>' : '') + '</div>' + err;
   }
   if (spec.type === 'emoji') {
     const faces = ['😞', '🙁', '😐', '🙂', '😃'], cur = row && row.sets[0] ? row.sets[0].rating : null;
     return '<div class="faces" role="group" aria-label="Rate from 1 to 5">' + faces.map((f, n) =>
       '<button class="face" data-act="rate" data-v="' + (n + 1) + '" aria-pressed="' + (cur === n + 1) + '" aria-label="' + (n + 1) + ' of 5">' + f + '<small>' + (n + 1) + '</small></button>').join('') +
-      '</div>' + (!slot.own && row ? '<div class="entry-acts"><button class="text-btn text-btn--danger" data-act="remove">Delete result</button></div>' : '') + err;
+      '</div><div class="entry-acts">' + (slot.own ? '<button class="text-btn text-btn--quiet" data-act="cancel">Cancel</button>' : '') +
+      (!slot.own && row ? '<button class="text-btn text-btn--danger" data-act="remove">Delete result</button>' : '') + '</div>' + err;
   }
   if (spec.type === 'text') {
     return '<label class="field" style="margin-top:0"><span>' + (slot.own ? 'Your result' : 'Result') + '</span><textarea class="input" data-f="text" data-i="0" rows="3" placeholder="Weights, reps, how it went">' + esc(d.raw[0].text) + '</textarea></label>' + acts('Save');
