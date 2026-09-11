@@ -347,6 +347,9 @@ dialog.sheet::backdrop { background: rgba(20,22,28,0.5); backdrop-filter: blur(2
 .who small { display: block; font-size: 12.5px; color: var(--ink-3); line-height: 1.45; margin-top: 1px; }
 .val { font-family: var(--display); font-size: 30px; line-height: 1; color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
 .val[data-capped] { color: var(--magenta); font-size: 22px; }
+.row-sets { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.row-sets s { color: var(--magenta); text-decoration-thickness: 1.5px; }
+.cell-sub { display: block; margin-top: 2px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.5px; text-transform: none; color: var(--accent-ink); }
 .board-count { font-size: 10px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; color: var(--ink-3); margin: 2px 0 2px; }
 .board-count b { color: var(--blue); font-weight: 800; }
 .row--feed { grid-template-columns: 1fr; }
@@ -916,7 +919,7 @@ function setChips(row) {
     let t = '';
     if (s.seconds != null) t = TD.formatTime(s.seconds);
     else if (s.rounds != null) t = s.rounds + ' + ' + s.reps;
-    else if (s.value != null) t = s.value + (spec.type === 'load' ? ' ' + (s.unit || '') : '');
+    else if (s.value != null) t = s.value + (spec.type === 'load' ? ' ' + (s.unit || '') : '') + (s.reps ? ' × ' + s.reps : '');
     return '<span class="set-chip"' + (s.missed ? ' data-missed aria-label="' + esc(t) + ' missed"' : '') + '>' + esc(t) + '</span>';
   }).join('') + '</div>';
 }
@@ -971,10 +974,25 @@ function readDraft(slot) {
   return d;
 }
 
+// "4 reps @ 75%" for set i when the tag has a rep or percentage scheme
+function setTarget(spec, i) {
+  const r = spec.reps && spec.reps[i], p = spec.pcts && spec.pcts[i];
+  return [r ? r + (r === 1 ? ' rep' : ' reps') : '', p ? '@ ' + p + '%' : ''].filter(Boolean).join(' ');
+}
+
+// One set as short text: 1:52 · 5 + 12 · 185×4 · 150
+function setText(s, type) {
+  if (s.seconds != null) return TD.formatTime(s.seconds);
+  if (s.capped) return 'CAP ' + (s.rounds != null ? s.rounds + ' + ' : '') + s.reps;
+  if (s.rounds != null) return s.rounds + ' + ' + s.reps;
+  if (s.value != null) return s.value + (s.reps ? '×' + s.reps : '');
+  return '';
+}
+
 function cell(label, f, i, val, opts) {
   opts = opts || {};
   const id = 'in-' + f + '-' + i + '-' + Math.random().toString(36).slice(2, 7);
-  return '<div class="cell"><label for="' + id + '">' + esc(label) + '</label><input id="' + id + '" data-f="' + f + '" data-i="' + i + '" value="' + esc(val) + '" inputmode="' + (opts.decimal ? 'decimal' : 'numeric') +
+  return '<div class="cell"><label for="' + id + '">' + esc(label) + (opts.sub ? '<span class="cell-sub">' + esc(opts.sub) + '</span>' : '') + '</label><input id="' + id + '" data-f="' + f + '" data-i="' + i + '" value="' + esc(val) + '" inputmode="' + (opts.decimal ? 'decimal' : 'numeric') +
     '" autocomplete="off" placeholder="' + (opts.ph || '0') + '" maxlength="' + (opts.max || 6) + '">' + (opts.after || '') + '</div>';
 }
 
@@ -1029,11 +1047,11 @@ function editorHTML(slot) {
     const decimal = T.input === 'decimal';
     if (multi) {
       cells = '<div class="sets-grid">' + d.raw.map((r, i) => cell('Set ' + (i + 1), 'value', i, r.value, {
-        decimal, max: 7,
+        decimal, max: 7, sub: setTarget(spec, i),
         after: spec.type === 'load' ? '<button class="miss" data-act="miss" data-i="' + i + '" aria-pressed="' + !!r.missed + '" aria-label="Set ' + (i + 1) + ' missed">' + (r.missed ? 'Missed' : 'Miss?') + '</button>' : '',
       })).join('') + '</div>';
     } else {
-      cells = '<div class="cells">' + cell(unit ? unit : T.label, 'value', 0, d.raw[0].value, { decimal, max: 7 }) + '</div>';
+      cells = '<div class="cells">' + cell(unit ? unit : T.label, 'value', 0, d.raw[0].value, { decimal, max: 7, sub: setTarget(spec, 0) }) + '</div>';
     }
   }
 
@@ -1279,8 +1297,13 @@ function openBoard(sec) {
 async function loadBoard() {
   const b = S.board; if (!b) return;
   if (!b.rows.length) $('#board-bd').innerHTML = controlsHTML() + '<div class="loading">Loading</div>';
-  const r = await S.api.getLeaderboard(S.day, b.sec.key, { level: b.level || undefined, division: b.division || undefined });
+  const multi = TD.TYPES[b.sec.score.type].ranked && (b.sec.score.sets || 1) > 1;
+  const [r, sets] = await Promise.all([
+    S.api.getLeaderboard(S.day, b.sec.key, { level: b.level || undefined, division: b.division || undefined }),
+    multi ? S.api.getBoardSets(S.day, b.sec.key) : Promise.resolve({ data: null }),
+  ]);
   if (S.board !== b) return;
+  b.sets = sets.data || {};
   if (r.error) { $('#board-bd').innerHTML = controlsHTML() + '<p class="empty">The leaderboard didn’t load. ' + esc(r.error.message) + '</p>'; return; }
   b.rows = r.data || [];
   renderBoard();
@@ -1311,12 +1334,14 @@ function renderBoard() {
     h += '<p class="board-count"><b>' + rows.length + '</b> ' + (rows.length === 1 ? 'athlete' : 'athletes') + ' logged' + (ranked && b.level ? ' · ' + (b.level === 'rx' ? 'RX' : 'Scaled') : '') + (b.division ? ' · ' + esc(b.division) : '') + '</p>';
     h += '<ol class="board">' + rows.map(r => {
       if (!ranked) return feedRowHTML(r, meId, coach);
-      const sub = [r.division, r.level === 'scaled' && !b.level ? 'Scaled' : null, r.notes].filter(Boolean).join(' · ');
+      const rs = (b.sets || {})[r.score_id] || [];
+      const setsLine = rs.length > 1 ? '<span class="row-sets">' + rs.map(s => s.missed ? '<s>' + esc(setText(s)) + '</s>' : esc(setText(s))).join(' · ') + (rs[0] && rs[0].unit ? '\u00a0' + esc(rs[0].unit) : '') + '</span>' : '';
+      const sub = [r.division ? esc(r.division) : null, r.level === 'scaled' && !b.level ? 'Scaled' : null, setsLine || null].filter(Boolean).join(' · ');
       const val = b.sec.score.type === 'check' ? '✓' : r.display;
       return '<li class="row"' + (r.user_id === meId ? ' data-me' : '') + ' data-id="' + esc(r.score_id) + '">' +
         '<span class="place" data-p="' + (r.place || '') + '">' + (r.place || '–') + '</span>' +
         '<div class="who"><b>' + esc(r.display_name || 'Athlete') + (r.user_id === meId ? ' (you)' : '') + '</b>' +
-          (sub ? '<small>' + esc(sub) + '</small>' : '') +
+          (sub ? '<small>' + sub + '</small>' : '') + (r.notes ? '<small class="feed-notes">' + esc(r.notes) + '</small>' : '') +
           (r.edited_by_name ? '<small class="edited-by">Edited by ' + esc(r.edited_by_name) + '</small>' : '') + '</div>' +
         '<span class="val"' + (r.is_capped ? ' data-capped' : '') + '>' + esc(val) + '</span>' +
         rowActsHTML(r, coach) + '</li>';
