@@ -1,0 +1,1673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>HERD | WESTWOOD</title>
+<meta name="theme-color" content="#FFFFFF">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════════
+   PALETTE + TYPE — carried over from the Throwdown page
+   Blue leads. Orange = Scaled. Gold = today / highlights.
+   Magenta = caps, misses, warnings.
+   ══════════════════════════════════════════════════════ */
+:root {
+  --blue:      #0044DF;
+  --blue-deep: #0033A8;
+  --blue-soft: rgba(0,68,223,0.08);
+  --gold:      #DC8E09;
+  --gold-lt:   #F0A81C;
+  --orange:    #E07A1C;
+  --orange-ink:#A85A0D;   /* orange/gold as small text on white need these darker shades for contrast */
+  --gold-ink:  #8F5C05;
+  --magenta:   #CC1266;
+
+  --paper: #FFFFFF;
+  --wash:  #F5F7FC;
+  --ink:   #14161C;
+  --ink-2: #4B5364;
+  --ink-3: #7A8496;
+  --line:  #E2E7F2;
+
+  --grad: linear-gradient(90deg, var(--magenta) 0%, var(--orange) 52%, var(--gold) 100%);
+  --display: 'Bebas Neue', 'Oswald', 'Arial Narrow', sans-serif;
+  --col: 760px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: 'DM Sans', system-ui, sans-serif; font-weight: 400;
+  background: var(--wash); color: var(--ink);
+  -webkit-font-smoothing: antialiased; min-height: 100dvh;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: 0; }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+[hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.grad-rule { height: 3px; background: var(--grad); }
+.col { max-width: var(--col); margin: 0 auto; }
+
+/* ─── Buttons (from the reference) ─── */
+.btn-primary, .btn-ghost {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-weight: 700; font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase;
+  border-radius: 3px; text-decoration: none; transition: background .2s, color .2s, box-shadow .2s, transform .2s;
+  white-space: nowrap;
+}
+.btn-primary { background: var(--blue); color: #fff; padding: 16px 30px; box-shadow: 0 4px 16px rgba(0,68,223,0.28); }
+.btn-primary:hover { background: var(--gold); color: var(--ink); box-shadow: 0 6px 20px rgba(220,142,9,0.35); transform: translateY(-1px); }
+.btn-primary:disabled { background: var(--line); color: var(--ink-3); box-shadow: none; transform: none; cursor: default; }
+.btn-ghost { background: var(--paper); color: var(--blue); padding: 14px 24px; border: 2px solid var(--blue); }
+.btn-ghost:hover { background: var(--blue); color: #fff; box-shadow: 0 5px 18px rgba(0,68,223,0.28); transform: translateY(-1px); }
+.btn-ghost--orange { border-color: var(--orange); color: var(--orange-ink); }
+.btn-ghost--orange:hover { background: var(--orange); color: #fff; box-shadow: 0 5px 18px rgba(224,122,28,0.32); }
+.btn-ghost--magenta { border-color: var(--magenta); color: var(--magenta); }
+.btn-ghost--magenta:hover { background: var(--magenta); color: #fff; }
+.btn-sm { padding: 11px 16px; letter-spacing: 2px; }
+.btn-ghost.btn-sm { padding: 9px 14px; }
+.text-btn {
+  font-size: 10px; font-weight: 800; letter-spacing: 1.8px; text-transform: uppercase;
+  color: var(--blue); padding: 8px 2px;
+}
+.text-btn:hover { color: var(--gold); }
+.text-btn--quiet { color: var(--ink-3); }
+.text-btn--danger { color: var(--magenta); }
+
+/* ─── Segmented control (from the reference) ─── */
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; background: var(--paper); }
+.seg button {
+  font-family: var(--display); font-size: 19px; letter-spacing: 1.5px; line-height: 1;
+  padding: 10px 20px; color: var(--ink-3); transition: background .18s, color .18s;
+}
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button:hover { color: var(--ink); background: var(--wash); }
+.seg button[aria-pressed="true"] { background: var(--blue); color: #fff; }
+.seg button[aria-pressed="true"][data-v="scaled"] { background: var(--orange); }
+.seg--sm button { font-size: 16px; padding: 8px 13px; }
+.seg button:disabled { color: #B6BECC; background: var(--paper); cursor: default; }
+.wk-arrow { font-size: 26px !important; padding: 2px 16px 0 !important; }
+
+/* ─── Nav ─── */
+.nav-bar {
+  position: sticky; top: 0; z-index: 40;
+  background: rgba(255,255,255,0.94); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  padding: 0 18px; padding-top: env(safe-area-inset-top);
+}
+.nav-inner { max-width: var(--col); margin: 0 auto; height: 62px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.brand { display: flex; align-items: center; text-decoration: none; color: var(--ink); }
+.brand img { height: 40px; width: auto; }
+.brand-word { font-family: var(--display); font-size: 30px; letter-spacing: 1px; line-height: 1; display: flex; align-items: center; white-space: nowrap; }
+.bw-a { color: var(--blue); }
+.bw-b { color: var(--orange); }       /* brand orange: 3:1 on white at this size; brand gold would not be */
+.bw-sep { display: inline-block; width: 2px; height: 0.62em; background: #C9D0DC; margin: 0 0.32em; position: relative; top: -0.04em; }
+@media (max-width: 360px) { .brand-word { font-size: 25px; } }
+.nav-actions { display: flex; align-items: center; gap: 10px; }
+.me-btn { display: flex; align-items: center; gap: 10px; padding: 4px 4px 4px 12px; border: 1px solid var(--line); border-radius: 3px; background: var(--paper); }
+.me-btn:hover { border-color: var(--blue); }
+.me-name { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.me-init { width: 34px; height: 34px; border-radius: 2px; background: var(--blue); color: #fff; font-family: var(--display); font-size: 19px; display: grid; place-items: center; letter-spacing: 0.5px; }
+.me-btn[data-role="coach"] .me-init { background: var(--gold); color: var(--ink); }
+
+.demo-bar { background: var(--ink); color: rgba(255,255,255,0.8); font-size: 12.5px; line-height: 1.5; padding: 10px 18px; }
+@media (min-width: 700px) { .demo-bar { padding: 10px 28px; } }
+.demo-bar b { color: var(--gold-lt); font-weight: 700; }
+
+/* ─── Day header: the hero, scaled down for daily use ─── */
+.day-head { position: relative; overflow: hidden; background: var(--paper); border-bottom: 1px solid var(--line); padding: 26px 18px 20px; }
+.head-photo {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background-size: cover; background-position: center 32%;
+  opacity: 0.16; filter: grayscale(0.3) contrast(0.92);
+}
+.head-photo::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.2) 45%, rgba(255,255,255,0.9) 100%);
+}
+.day-head::before, .day-head::after { content: ''; position: absolute; border-radius: 50%; pointer-events: none; filter: blur(10px); z-index: 0; }
+.day-head::before { width: 560px; height: 420px; top: -200px; left: -200px; background: radial-gradient(ellipse, rgba(0,68,223,0.10) 0%, transparent 68%); }
+.day-head::after { width: 540px; height: 420px; bottom: -240px; right: -200px; background: radial-gradient(ellipse, rgba(220,142,9,0.14) 0%, transparent 68%); }
+.day-head > .col { position: relative; z-index: 1; }
+
+.status { font-size: 10px; font-weight: 700; letter-spacing: 5px; text-transform: uppercase; color: var(--blue); display: block; margin-bottom: 10px; }
+.status[data-tone="rest"] { color: var(--gold-ink); }
+.status[data-tone="wip"] { color: var(--magenta); }
+.status[data-tone="locked"], .status[data-tone="empty"] { color: var(--ink-3); }
+.day-title { font-family: var(--display); font-weight: 400; font-size: clamp(50px, 13vw, 84px); line-height: 0.86; letter-spacing: -0.5px; color: var(--ink); }
+.day-title em { font-style: normal; color: var(--blue); display: block; }
+
+.week-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 22px 0 10px; }
+.week-label { font-family: var(--display); font-size: 21px; letter-spacing: 1px; color: var(--ink-2); }
+.week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.wk {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  background: var(--paper); border: 1px solid var(--line); border-top: 4px solid var(--line); border-radius: 4px;
+  padding: 9px 0 8px; transition: border-color .15s, background .15s;
+}
+.wk:hover { border-color: var(--blue); }
+.wk-dow { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-3); }
+.wk-num { font-family: var(--display); font-size: clamp(26px, 7vw, 34px); line-height: 0.9; color: var(--ink); font-variant-numeric: tabular-nums; }
+.wk[data-rest] .wk-num { color: var(--ink-3); }
+.wk[data-none] { background: transparent; }
+.wk[data-none] .wk-num { color: #B6BECC; }
+.wk[data-today] { border-top-color: var(--gold); }
+.wk[aria-current="date"] { border-color: var(--blue); border-top-color: var(--blue); background: var(--blue-soft); }
+.wk[aria-current="date"] .wk-num, .wk[aria-current="date"] .wk-dow { color: var(--blue); }
+
+/* ─── Day body ─── */
+.day-body { max-width: calc(var(--col) + 32px); margin: 0 auto; padding: 18px 12px calc(64px + env(safe-area-inset-bottom)); }
+.note {
+  font-size: 15px; line-height: 1.65; color: var(--ink-2);
+  background: var(--blue-soft); border-left: 4px solid var(--blue); border-radius: 0 4px 4px 0;
+  padding: 16px 20px; margin-bottom: 12px; white-space: pre-line;
+}
+.note b { color: var(--ink); font-weight: 600; }
+.note--wip { background: rgba(204,18,102,0.06); border-left-color: var(--magenta); }
+.note--wip b { color: var(--magenta); }
+.progress { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-2); background: var(--paper); border: 1px solid var(--line); padding: 9px 14px; border-radius: 3px; display: inline-block; margin-bottom: 12px; }
+.progress strong { color: var(--blue); font-weight: 800; }
+.blk { font-family: var(--display); font-size: 30px; letter-spacing: 1px; color: var(--ink); line-height: 1; margin: 26px 4px 10px; display: flex; align-items: center; gap: 12px; }
+.blk::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.blk:first-child { margin-top: 6px; }
+
+/* ─── Workout card ─── */
+.card {
+  --accent: var(--blue); --accent-ink: var(--blue);
+  position: relative; overflow: hidden; margin-bottom: 12px; scroll-margin-top: 78px;
+  background: var(--paper); border: 1px solid var(--line); border-radius: 4px;
+}
+.card::before {
+  content: ''; position: absolute; top: 0; left: 0; height: 4px; width: 30%;
+  background: var(--accent); transition: width .7s cubic-bezier(.2,.8,.2,1);
+}
+.card[data-state="logged"]::before { width: 100%; }
+.card[data-state="unscored"]::before { width: 100%; background: var(--line); }
+.card-hd { padding: 22px 20px 0; }
+.card-key { font-family: var(--display); font-size: 16px; letter-spacing: 2px; color: var(--accent-ink); line-height: 1; }
+.card-title { font-family: var(--display); font-weight: 400; font-size: 32px; line-height: 0.95; color: var(--ink); margin-top: 4px; letter-spacing: 0.3px; }
+.card-fmt { font-size: 9.5px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; color: var(--accent-ink); margin-top: 8px; }
+.card[data-state="unscored"] .card-fmt { color: var(--ink-3); }
+.card-text { padding: 12px 20px 20px; font-size: 15.5px; line-height: 1.65; color: var(--ink-2); white-space: pre-line; overflow-wrap: anywhere; }
+.card-text a { color: var(--blue); font-weight: 600; text-decoration: none; border-bottom: 2px solid rgba(0,68,223,0.25); }
+
+.video-btn {
+  display: inline-flex; align-items: center; gap: 7px; vertical-align: baseline;
+  font-size: 10px; font-weight: 800; letter-spacing: 1.8px; text-transform: uppercase;
+  color: var(--blue); background: var(--blue-soft); border: 1px solid rgba(0,68,223,0.22); border-radius: 3px; padding: 6px 10px;
+}
+.video-btn:hover { background: var(--blue); color: #fff; }
+.video-btn[aria-expanded="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+.video-wrap { position: relative; width: 100%; max-width: 560px; aspect-ratio: 16 / 9; margin: 10px 0 6px; background: #000; border-radius: 4px; overflow: hidden; white-space: normal; }
+.video-wrap--vertical { max-width: 300px; aspect-ratio: 9 / 16; }
+.video-wrap iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.card-notes { padding: 0 20px 18px; margin-top: -6px; }
+.day-notes { margin: -4px 0 12px; }
+.notes-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 10px; font-weight: 800; letter-spacing: 1.8px; text-transform: uppercase;
+  color: var(--gold-ink); background: var(--paper); border: 2px solid var(--gold); border-radius: 3px; padding: 8px 12px;
+}
+.notes-btn::after { content: '+'; font-size: 15px; line-height: 1; font-weight: 700; }
+.notes-btn[aria-expanded="true"] { background: var(--gold); color: var(--ink); }
+.notes-btn[aria-expanded="true"]::after { content: '−'; }
+.notes-btn:hover { background: rgba(220,142,9,0.12); }
+.notes-btn[aria-expanded="true"]:hover { background: var(--gold-lt); }
+.coach-notes { margin-top: 10px; background: rgba(220,142,9,0.08); border-left: 4px solid var(--gold); border-radius: 0 4px 4px 0; padding: 14px 16px; }
+.coach-notes-text { font-size: 15px; line-height: 1.65; color: var(--ink-2); white-space: pre-line; overflow-wrap: anywhere; }
+.coach-notes-text a { color: var(--blue); font-weight: 600; text-decoration: none; border-bottom: 2px solid rgba(0,68,223,0.25); }
+.notes-vis { display: inline-block; margin-bottom: 8px; }
+.note a { color: var(--blue); font-weight: 600; text-decoration: none; border-bottom: 2px solid rgba(0,68,223,0.25); }
+.panel { border-top: 1px solid var(--line); background: #FAFBFE; padding: 16px 20px 20px; }
+.panel-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.panel.panel--visitor { padding-top: 8px; padding-bottom: 8px; background: var(--paper); }
+.panel--visitor .text-btn { padding: 10px 0; text-align: left; line-height: 1.5; }
+
+/* Logged score */
+.logged { display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; align-items: end; }
+.logged-score { font-family: var(--display); font-size: clamp(46px, 13vw, 66px); line-height: 0.85; color: var(--ink); font-variant-numeric: tabular-nums; letter-spacing: -0.5px; }
+.logged-score[data-capped] { color: var(--magenta); font-size: clamp(34px, 9vw, 46px); }
+.logged-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-self: end; }
+.tag { font-size: 9.5px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; padding: 6px 9px; border-radius: 3px; color: var(--blue); background: var(--blue-soft); border: 1px solid rgba(0,68,223,0.2); }
+.tag[data-v="scaled"] { color: var(--orange-ink); background: rgba(224,122,28,0.09); border-color: rgba(224,122,28,0.3); }
+.tag--quiet { color: var(--ink-3); background: var(--wash); border-color: var(--line); }
+.set-list { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.set-chip { font-family: var(--display); font-size: 18px; letter-spacing: 0.5px; color: var(--ink-2); background: var(--paper); border: 1px solid var(--line); border-radius: 3px; padding: 5px 9px 3px; }
+.set-chip[data-missed] { color: var(--magenta); text-decoration: line-through; text-decoration-thickness: 2px; }
+.logged-notes { grid-column: 1 / -1; font-size: 14.5px; line-height: 1.6; color: var(--ink-2); margin-top: 10px; font-style: italic; white-space: pre-line; }
+.logged-acts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; align-items: center; }
+.stamp { animation: stamp .45s cubic-bezier(.2,.9,.3,1.2) both; }
+@keyframes stamp { from { transform: scale(1.18); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* Score entry: scoreboard scale */
+.entry-top { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.cells { display: flex; gap: 8px; align-items: stretch; max-width: 460px; }
+.cell {
+  flex: 1 1 0; min-width: 0; background: var(--paper); border: 1px solid var(--line); border-top: 4px solid var(--accent);
+  border-radius: 4px; padding: 8px 6px 6px; display: flex; flex-direction: column; align-items: center;
+}
+.cell:focus-within { border-color: var(--accent); box-shadow: 0 6px 20px rgba(20,22,28,0.08); }
+.cell label { font-size: 9px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-3); }
+.cell input {
+  width: 100%; border: 0; background: transparent; outline: none; text-align: center;
+  font-family: var(--display); font-size: clamp(48px, 14vw, 64px); line-height: 1; color: var(--ink);
+  font-variant-numeric: tabular-nums; padding: 4px 0 0; -moz-appearance: textfield;
+}
+.cell input::placeholder { color: #C9D0DC; }
+.colon { font-family: var(--display); font-size: 48px; color: var(--ink-3); align-self: center; padding-top: 14px; }
+.sets-grid { max-width: 580px; display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.sets-grid .cell input { font-size: 38px; }
+.miss { margin-top: 4px; font-size: 9px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-3); padding: 5px 8px; border-radius: 3px; }
+.miss[aria-pressed="true"] { color: #fff; background: var(--magenta); }
+.set-row { display: grid; grid-template-columns: 54px 1fr auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+.set-row .set-n { font-family: var(--display); font-size: 18px; letter-spacing: 1px; color: var(--ink-3); }
+.set-row .cell input { font-size: 34px; }
+.set-row .colon { font-size: 30px; padding-top: 10px; }
+.unit-lab { font-family: var(--display); font-size: 22px; letter-spacing: 1px; color: var(--ink-3); align-self: center; }
+
+.cap-toggle { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 14px; color: var(--ink-2); cursor: pointer; user-select: none; }
+.cap-toggle input { width: 20px; height: 20px; accent-color: var(--magenta); }
+.cap-toggle b { color: var(--magenta); font-weight: 700; }
+
+.field { display: block; margin-top: 12px; }
+.field > span { display: block; font-size: 9px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; }
+.input, textarea.input, select.input {
+  width: 100%; background: var(--paper); border: 1px solid var(--line); border-radius: 3px;
+  font-size: 16px; line-height: 1.5; padding: 12px 14px; color: var(--ink); outline: none; transition: border-color .15s;
+}
+.input:focus { border-color: var(--blue); }
+textarea.input { resize: vertical; min-height: 64px; }
+.entry-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 16px; }
+.err { color: var(--magenta); font-size: 13.5px; font-weight: 600; line-height: 1.5; }
+.err:empty { display: none; }
+
+.faces { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.face { background: var(--paper); border: 1px solid var(--line); border-top: 4px solid var(--line); border-radius: 4px; padding: 10px 0 8px; font-size: 26px; line-height: 1.1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.face small { font-family: var(--display); font-size: 16px; color: var(--ink-3); }
+.face:hover { border-color: var(--accent); }
+.face[aria-pressed="true"] { border-color: var(--accent); background: var(--blue-soft); }
+
+/* Feel + message cards */
+.plain-card { background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 22px 20px; margin-top: 12px; position: relative; overflow: hidden; }
+.plain-card--grad::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--grad); }
+.plain-title { font-family: var(--display); font-weight: 400; font-size: 30px; line-height: 1; color: var(--ink); margin-bottom: 8px; }
+.plain-card p { font-size: 15px; line-height: 1.65; color: var(--ink-2); max-width: 560px; }
+.plain-card .acts { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.feel-row { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.feel-row .seg { width: 100%; }
+.feel-row .seg button { flex: 1; font-size: 24px; padding: 12px 0; }
+.feel-ends { display: flex; justify-content: space-between; font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-3); }
+.loading { text-align: center; padding: 60px 0; font-size: 10px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--ink-3); }
+
+/* ─── Sheets (dialogs) ─── */
+dialog.sheet {
+  border: 0; padding: 0; margin: auto; width: min(580px, calc(100% - 32px)); max-height: min(88dvh, 860px);
+  background: var(--paper); color: var(--ink); border-radius: 6px; overflow: hidden;
+  box-shadow: 0 24px 64px rgba(20,22,28,0.28);
+}
+dialog.sheet[open] { display: flex; flex-direction: column; }
+dialog.sheet::backdrop { background: rgba(20,22,28,0.5); backdrop-filter: blur(2px); }
+.sheet-hd { position: relative; padding: 24px 56px 16px 22px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+.sheet-hd::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--grad); }
+.sheet-sub { font-size: 10px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--blue); display: block; margin-bottom: 6px; }
+.sheet-title { font-family: var(--display); font-weight: 400; font-size: 36px; line-height: 0.95; color: var(--ink); }
+.sheet-x { position: absolute; top: 18px; right: 12px; width: 40px; height: 40px; border-radius: 3px; font-size: 22px; color: var(--ink-3); }
+.sheet-x:hover { background: var(--wash); color: var(--ink); }
+.sheet-bd { overflow-y: auto; padding: 16px 22px 26px; -webkit-overflow-scrolling: touch; }
+.sheet-bd > .field:first-child { margin-top: 0; }
+.sheet-section { margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--line); }
+.sheet-section h3 { font-family: var(--display); font-weight: 400; font-size: 26px; line-height: 1; margin-bottom: 4px; }
+.sheet-section > p { font-size: 13.5px; line-height: 1.55; color: var(--ink-2); }
+@media (max-width: 640px) {
+  dialog.sheet { width: 100%; max-width: 100%; margin: auto 0 0; border-radius: 8px 8px 0 0; max-height: 92dvh; }
+  .sheet-bd { padding-bottom: calc(26px + env(safe-area-inset-bottom)); }
+}
+
+/* Leaderboard */
+.board-controls { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; margin-bottom: 12px; }
+.board-note { font-size: 13px; line-height: 1.55; color: var(--ink-2); background: var(--wash); border-left: 4px solid var(--gold); padding: 10px 14px; border-radius: 0 3px 3px 0; margin-bottom: 12px; }
+.board { list-style: none; }
+.row { display: grid; grid-template-columns: 46px 1fr auto; gap: 2px 12px; align-items: center; padding: 14px 4px; border-bottom: 1px solid var(--line); }
+.row[data-me] { background: var(--blue-soft); margin: 0 -10px; padding: 14px 14px; border-radius: 3px; border-bottom-color: transparent; }
+.place { font-family: var(--display); font-size: 36px; line-height: 0.9; color: var(--ink-3); text-align: center; font-variant-numeric: tabular-nums; }
+.place[data-p="1"] { color: var(--blue); }
+.place[data-p="2"] { color: var(--orange); }
+.place[data-p="3"] { color: var(--gold); }
+.who { min-width: 0; }
+.who b { display: block; font-size: 15px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.who small { display: block; font-size: 12.5px; color: var(--ink-3); line-height: 1.45; margin-top: 1px; }
+.val { font-family: var(--display); font-size: 30px; line-height: 1; color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+.val[data-capped] { color: var(--magenta); font-size: 22px; }
+.row-acts { grid-column: 2 / -1; display: flex; gap: 14px; margin-top: 6px; }
+.like { font-size: 10px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-3); display: inline-flex; gap: 6px; align-items: center; padding: 6px 0; }
+.like span { font-size: 13px; }
+.like[aria-pressed="true"] { color: var(--gold-ink); }
+.like:hover { color: var(--blue); }
+.comments { grid-column: 2 / -1; margin-top: 8px; }
+.cmt { font-size: 14px; line-height: 1.55; color: var(--ink-2); padding: 8px 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.cmt b { color: var(--ink); font-weight: 600; margin-right: 4px; }
+.cmt time { font-size: 11px; color: var(--ink-3); margin-left: 4px; }
+.cmt-form { display: flex; gap: 8px; margin-top: 8px; }
+.cmt-form .input { padding: 10px 12px; font-size: 15px; }
+.empty { font-size: 14.5px; color: var(--ink-2); padding: 18px 0; line-height: 1.6; }
+
+.edited { grid-column: 1 / -1; margin-top: 8px; font-size: 12px; font-weight: 600; color: var(--gold-ink); }
+.who .edited-by { color: var(--gold-ink); font-weight: 600; font-size: 11.5px; }
+.coach-bar { display: flex; align-items: center; gap: 10px; margin: -2px 0 12px; }
+.coach-bar span { font-size: 9px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--ink); background: var(--gold); padding: 4px 7px; border-radius: 2px; }
+.row-coach { margin-left: auto; display: inline-flex; gap: 14px; }
+.like--danger { color: var(--magenta); }
+.like--danger[data-confirm="yes"] { color: #fff; background: var(--magenta); padding: 6px 9px; border-radius: 3px; }
+.text-btn--danger[data-confirm="yes"] { color: #fff; background: var(--magenta); padding: 8px 10px; border-radius: 3px; }
+.cmt-acts { display: inline-flex; gap: 10px; align-items: flex-start; }
+.cmt-edit { margin: 8px 0; }
+.people { list-style: none; margin-top: 12px; }
+.person { display: grid; grid-template-columns: 1fr; gap: 8px; padding: 12px 0; border-top: 1px solid var(--line); }
+.person-main { min-width: 0; }
+.person-main b { display: block; font-size: 15px; font-weight: 600; color: var(--ink); }
+.person-main small { display: block; font-size: 12.5px; color: var(--ink-3); overflow-wrap: anywhere; line-height: 1.5; }
+.person-ctrls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.input.input--sm { width: auto; padding: 8px 10px; font-size: 14px; }
+.rename { display: flex; gap: 8px; align-items: center; }
+.rename .input { padding: 8px 10px; font-size: 15px; }
+.role-tag { font-family: 'DM Sans', sans-serif; vertical-align: middle; margin-left: 8px; position: relative; top: -4px; }
+@media (min-width: 640px) { .person { grid-template-columns: 1fr auto; align-items: center; } }
+.auth-switch { margin-top: 18px; font-size: 14px; color: var(--ink-2); }
+.pw-wrap { position: relative; }
+.pw-wrap .input { padding-right: 70px; }
+.pw-wrap button { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); }
+.msg-ok { font-size: 14.5px; line-height: 1.6; color: var(--ink-2); background: var(--blue-soft); border-left: 4px solid var(--blue); padding: 14px 16px; border-radius: 0 3px 3px 0; margin-top: 12px; }
+.msg-ok b { color: var(--ink); }
+.warn-list { list-style: none; margin-top: 10px; }
+.warn-list li { font-size: 13.5px; line-height: 1.5; color: var(--ink-2); padding: 8px 0; border-top: 1px solid var(--line); }
+.warn-list b { font-family: var(--display); font-weight: 400; font-size: 18px; letter-spacing: 0.5px; color: var(--magenta); margin-right: 6px; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.toast {
+  position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom)); transform: translate(-50%, 20px);
+  background: var(--ink); color: #fff; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 13px 20px; border-radius: 3px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 100;
+  border-top: 3px solid var(--gold);
+}
+.toast[data-show] { opacity: 1; transform: translate(-50%, 0); }
+.toast[data-kind="error"] { text-transform: none; letter-spacing: 0; font-size: 14px; font-weight: 600; border-top-color: var(--magenta); width: max-content; max-width: calc(100% - 32px); line-height: 1.45; }
+
+@media (min-width: 700px) {
+  .nav-bar { padding: 0 28px; }
+  .day-head { padding: 40px 28px 26px; }
+  .day-body { padding: 26px 16px 80px; }
+  .card-hd { padding: 26px 28px 0; }
+  .card-text { padding: 12px 28px 22px; }
+  .card-notes { padding: 0 28px 20px; }
+  .panel { padding: 18px 28px 24px; }
+  .panel.panel--visitor { padding: 8px 28px; }
+  .plain-card { padding: 26px 28px; }
+  .card-title { font-size: 36px; }
+  .week-bar { margin-top: 28px; }
+}
+@media (max-width: 420px) {
+  .me-name { display: none; }
+  .me-btn { padding: 3px; }
+  .seg button { padding: 10px 14px; }
+  .set-row { grid-template-columns: 40px 1fr auto 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav-bar" aria-label="Main">
+  <div class="nav-inner">
+    <a class="brand" href="#" id="brand"><span class="brand-word" id="brand-word"></span></a>
+    <div class="nav-actions" id="nav-actions"></div>
+  </div>
+</nav>
+<div class="grad-rule"></div>
+<div class="demo-bar" id="demo-bar" hidden></div>
+
+<main>
+  <header class="day-head">
+    <div class="head-photo" id="head-photo" aria-hidden="true"></div>
+    <div class="col">
+      <span class="status" id="status" data-tone="empty">&nbsp;</span>
+      <h1 class="day-title" id="day-title">&nbsp;</h1>
+      <div class="week-bar">
+        <span class="week-label" id="week-label"></span>
+        <div class="seg seg--sm" role="group" aria-label="Change week">
+          <button id="wk-prev" class="wk-arrow" aria-label="Previous week">‹</button>
+          <button id="wk-today">Today</button>
+          <button id="wk-next" class="wk-arrow" aria-label="Next week">›</button>
+        </div>
+      </div>
+      <div class="week" id="week" role="group" aria-label="Days this week"></div>
+    </div>
+  </header>
+  <div class="day-body" id="day-body"><div class="loading">Loading</div></div>
+</main>
+
+<dialog class="sheet" id="dlg-board" aria-labelledby="board-title">
+  <div class="sheet-hd">
+    <span class="sheet-sub" id="board-sub"></span>
+    <h2 class="sheet-title" id="board-title"></h2>
+    <button class="sheet-x" data-close aria-label="Close">×</button>
+  </div>
+  <div class="sheet-bd" id="board-bd"></div>
+</dialog>
+
+<dialog class="sheet" id="dlg-edit" aria-labelledby="edit-title">
+  <div class="sheet-hd">
+    <span class="sheet-sub" id="edit-sub"></span>
+    <h2 class="sheet-title" id="edit-title"></h2>
+    <button class="sheet-x" data-close aria-label="Close">×</button>
+  </div>
+  <div class="sheet-bd" id="edit-bd"></div>
+</dialog>
+
+<dialog class="sheet" id="dlg-auth" aria-labelledby="auth-title">
+  <div class="sheet-hd">
+    <h2 class="sheet-title" id="auth-title"></h2>
+    <button class="sheet-x" data-close aria-label="Close">×</button>
+  </div>
+  <div class="sheet-bd" id="auth-bd"></div>
+</dialog>
+
+<dialog class="sheet" id="dlg-profile" aria-labelledby="profile-title">
+  <div class="sheet-hd">
+    <h2 class="sheet-title" id="profile-title">Your account</h2>
+    <button class="sheet-x" data-close aria-label="Close">×</button>
+  </div>
+  <div class="sheet-bd" id="profile-bd"></div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="trainderive-core.js"></script>
+<script src="trainderive-api.js"></script>
+<script src="trainderive-demo.js"></script>
+<script>
+/* ══════════════════════════════════════════════════════
+   CONFIG — the only part you need to edit
+   Leave SUPABASE_URL blank to run on demo data.
+   ══════════════════════════════════════════════════════ */
+const CONFIG = {
+  SUPABASE_URL: '',                 // https://YOUR-PROJECT.supabase.co
+  SUPABASE_KEY: '',                 // sb_publishable_…
+  APP_NAME: 'HERD | WESTWOOD',     // browser tab + nav wordmark; the words on each side of | get the two brand colors
+  LOGO_URL: '',                     // optional image for the nav; the wordmark shows when blank
+  // Header background, currently the group photo from the Throwdown page. Replace, or set to '' for none.
+  HEADER_PHOTO: 'https://images.squarespace-cdn.com/content/629fa4eebc757d4e15d9eec4/ce6a2bf7-371c-41a4-a096-40a7c414afc4/group1.jpg?content-type=image%2Fjpeg',
+  DIVISIONS: ['Men', 'Women'],      // leaderboard filters; athletes pick one in their account
+  XLSX_URL: 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+  SUPABASE_JS_URL: 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
+};
+
+/* ── Helpers ─────────────────────────────────────────── */
+const $ = (sel, el) => (el || document).querySelector(sel);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const isoOf = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const dateOf = iso => new Date(iso + 'T12:00:00');
+const todayISO = () => isoOf(new Date());
+const addDays = (iso, n) => { const d = dateOf(iso); d.setDate(d.getDate() + n); return isoOf(d); };
+const mondayOf = iso => { const d = dateOf(iso); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return isoOf(d); };
+const fmt = (iso, o) => dateOf(iso).toLocaleDateString('en-US', o);
+const ACCENTS = [['var(--blue)', 'var(--blue)'], ['var(--orange)', 'var(--orange-ink)'], ['var(--gold)', 'var(--gold-ink)'], ['var(--magenta)', 'var(--magenta)']];
+/* Links: YouTube/Vimeo become an inline "Watch video" player (like the previous app); Instagram/TikTok open
+   externally; any other link shows its address. Runs on already-escaped text. */
+const decodeEntities = x => x.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+function videoStart(t) {
+  if (!t) return 0;
+  if (/^\d+s?$/.test(t)) return parseInt(t, 10);
+  const m = t.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/);
+  return m ? (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0) : 0;
+}
+function videoEmbed(raw) {
+  let u; try { u = new URL(raw); } catch (e) { return null; }
+  const host = u.hostname.replace(/^(www|m)\./, '');
+  let id = null, vertical = false, m;
+  if (host === 'youtu.be') id = u.pathname.split('/')[1];
+  else if (host === 'youtube.com' || host === 'youtube-nocookie.com') {
+    if (u.pathname === '/watch') id = u.searchParams.get('v');
+    else if ((m = u.pathname.match(/^\/(shorts|embed|live)\/([^/?#]+)/))) { id = m[2]; vertical = m[1] === 'shorts'; }
+  }
+  if (id && /^[\w-]{6,20}$/.test(id)) {
+    const start = videoStart(u.searchParams.get('t') || u.searchParams.get('start'));
+    return { src: 'https://www.youtube-nocookie.com/embed/' + id + '?autoplay=1&playsinline=1&rel=0' + (start ? '&start=' + start : ''), vertical };
+  }
+  if (host === 'vimeo.com' && (m = u.pathname.match(/^\/(\d+)(?:\/([0-9a-f]+))?\/?$/))) return { src: 'https://player.vimeo.com/video/' + m[1] + '?autoplay=1' + (m[2] ? '&h=' + m[2] : ''), vertical: false };
+  if (host === 'player.vimeo.com' && (m = u.pathname.match(/^\/video\/(\d+)/))) return { src: 'https://player.vimeo.com/video/' + m[1] + '?autoplay=1', vertical: false };
+  return null;
+}
+const EXTERNAL_VIDEO = { 'instagram.com': 'Instagram', 'tiktok.com': 'TikTok' };
+const PLAY_LABEL = '<span aria-hidden="true">▶</span> Watch video';
+function linkify(html) {
+  return html.replace(/\bhttps?:\/\/[^\s<]+/g, match => {
+    let url = match, tail = '';
+    const t = url.match(/(?:[.,;:!?)\]]|&quot;|&#39;)+$/);
+    if (t) { tail = t[0]; url = url.slice(0, -tail.length); }
+    const raw = decodeEntities(url);
+    const v = videoEmbed(raw);
+    if (v) return '<button type="button" class="video-btn" data-act="video" data-src="' + esc(v.src) + '"' + (v.vertical ? ' data-vertical' : '') + ' aria-expanded="false">' + PLAY_LABEL + '</button>' + tail;
+    let host = ''; try { host = new URL(raw).hostname.replace(/^(www|m)\./, ''); } catch (e) { return match; }
+    const ext = EXTERNAL_VIDEO[host];
+    const label = ext ? '<span aria-hidden="true">▶</span> Watch on ' + ext + ' <span aria-hidden="true">↗</span>'
+                      : esc(raw.replace(/^https?:\/\/(www\.)?/, '').slice(0, 42)) + (raw.length > 50 ? '…' : '');
+    return '<a href="' + esc(raw) + '" target="_blank" rel="noopener">' + label + '</a>' + tail;
+  });
+}
+function toggleVideo(btn) {
+  const next = btn.nextElementSibling;
+  if (next && next.classList.contains('video-wrap')) {          // close: remove the player so playback stops
+    next.remove(); btn.setAttribute('aria-expanded', 'false'); btn.innerHTML = PLAY_LABEL; return;
+  }
+  const src = btn.dataset.src || '';
+  if (!/^https:\/\/(www\.youtube-nocookie\.com\/embed\/|player\.vimeo\.com\/video\/)/.test(src)) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'video-wrap' + (btn.hasAttribute('data-vertical') ? ' video-wrap--vertical' : '');
+  const f = document.createElement('iframe');
+  f.src = src; f.title = 'Video player';
+  f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+  f.allowFullscreen = true; f.referrerPolicy = 'strict-origin-when-cross-origin';
+  wrap.appendChild(f); btn.after(wrap);
+  btn.setAttribute('aria-expanded', 'true'); btn.innerHTML = '<span aria-hidden="true">■</span> Hide video';
+}
+const initials = name => String(name || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+const ago = ts => { const s = (Date.now() - new Date(ts)) / 1000; return s < 60 ? 'now' : s < 3600 ? Math.floor(s / 60) + 'm' : s < 86400 ? Math.floor(s / 3600) + 'h' : Math.floor(s / 86400) + 'd'; };
+function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Could not load ' + src)); document.head.appendChild(s); }); }
+let toastTimer;
+function toast(msg, kind) { const t = $('#toast'); t.textContent = msg; t.dataset.kind = kind || ''; t.setAttribute('data-show', ''); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.removeAttribute('data-show'), kind === 'error' ? 4500 : 2400); }
+
+/* ── State ───────────────────────────────────────────── */
+const S = {
+  api: null, db: null, day: todayISO(), dayData: null, cal: [], my: { scores: {}, feel: null },
+  profile: null, settings: {}, editing: {}, drafts: {}, pendingKey: null, justLogged: null, loadSeq: 0,
+  board: null, notesOpen: {},
+};
+const signedIn = () => S.api && S.api.isSignedIn();
+const isCoach = () => !!(S.profile && S.profile.role === 'coach');
+const allSections = () => (S.dayData ? S.dayData.blocks.flatMap(b => b.sections) : []);
+const sectionByKey = k => allSections().find(s => s.key === k);
+
+/* ── Boot ────────────────────────────────────────────── */
+async function boot() {
+  document.title = CONFIG.APP_NAME;
+  $('#brand').setAttribute('aria-label', CONFIG.APP_NAME + ', go to today');
+  if (CONFIG.LOGO_URL) $('#brand').innerHTML = '<img src="' + esc(CONFIG.LOGO_URL) + '" alt="' + esc(CONFIG.APP_NAME) + '">';
+  else {
+    const parts = CONFIG.APP_NAME.split('|').map(x => x.trim()).filter(Boolean);
+    $('#brand-word').innerHTML = parts.length === 2
+      ? '<span class="bw-a">' + esc(parts[0]) + '</span><span class="bw-sep" aria-hidden="true"></span><span class="bw-b">' + esc(parts[1]) + '</span>'
+      : esc(CONFIG.APP_NAME);
+  }
+  if (CONFIG.HEADER_PHOTO) $('#head-photo').style.backgroundImage = 'url("' + CONFIG.HEADER_PHOTO.replace(/"/g, '%22') + '")';
+
+  if (CONFIG.SUPABASE_URL && CONFIG.SUPABASE_KEY) {
+    await loadScript(CONFIG.SUPABASE_JS_URL);
+    S.db = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
+    S.api = TrainDeriveApi(S.db, TD);
+    const { data } = await S.db.auth.getSession();
+    S.api.setUserId(data && data.session ? data.session.user.id : null);
+    S.db.auth.onAuthStateChange((event, session) => {
+      if (event === 'INITIAL_SESSION') return;
+      setTimeout(() => onAuthChange(event, session), 0); // supabase-js: don't await other calls inside the callback
+    });
+  } else {
+    S.api = TrainDeriveDemo(TD);
+    S.api.onAuthChange(onAuthChange);
+    const bar = $('#demo-bar');
+    bar.innerHTML = '<div class="col"><b>Demo data.</b> Sign in with any email to log scores. Use an email containing “coach” to see coach tools.</div>';
+    bar.hidden = false;
+  }
+
+  const set = await S.api.getSettings();
+  S.settings = set.data || {};
+  await refreshProfile();
+  renderNav();
+  bindStatic();
+  window.addEventListener('hashchange', route);
+  route();
+}
+
+async function onAuthChange(event, session) {
+  S.api.setUserId(session && session.user ? session.user.id : null);
+  if (event === 'PASSWORD_RECOVERY') openAuth('newpass');
+  await refreshProfile();
+  renderNav();
+  await loadDay(S.day, true);
+}
+
+async function refreshProfile() {
+  S.profile = null;
+  if (!signedIn()) return;
+  const r = await S.api.getProfile();
+  S.profile = r.data || null;
+}
+
+function route() {
+  const h = location.hash.replace('#', '');
+  loadDay(/^\d{4}-\d{2}-\d{2}$/.test(h) ? h : todayISO());
+}
+
+function bindStatic() {
+  $('#wk-prev').onclick = () => { location.hash = addDays(S.day, -7); };
+  $('#wk-next').onclick = () => { location.hash = addDays(S.day, 7); };
+  $('#wk-today').onclick = () => { location.hash = todayISO(); };
+  $('#brand').onclick = e => { e.preventDefault(); location.hash = todayISO(); };
+  document.querySelectorAll('dialog [data-close]').forEach(b => { b.onclick = () => b.closest('dialog').close(); });
+  document.querySelectorAll('dialog.sheet').forEach(d => d.addEventListener('click', e => { if (e.target === d) d.close(); }));
+  ['#day-body', '#dlg-edit'].forEach(sel => { $(sel).addEventListener('click', onEntryClick); $(sel).addEventListener('keydown', onEntryKey); });
+  $('#profile-bd').addEventListener('change', onPeopleChange);
+  $('#profile-bd').addEventListener('click', onPeopleClick);
+  $('#profile-bd').addEventListener('submit', onPeopleSubmit);
+  $('#profile-bd').addEventListener('input', e => { if (e.target.id === 'pp-search') renderPeople(); });
+  $('#dlg-board').addEventListener('click', onBoardClick);
+  $('#dlg-board').addEventListener('submit', onBoardSubmit);
+  $('#dlg-board').addEventListener('close', () => { S.board = null; });
+}
+
+/* ── Nav ─────────────────────────────────────────────── */
+function renderNav() {
+  const el = $('#nav-actions');
+  if (!signedIn()) {
+    el.innerHTML = '<button class="btn-primary btn-sm" id="nav-signin">Sign in</button>';
+    $('#nav-signin').onclick = () => openAuth('signin');
+    return;
+  }
+  const name = S.profile ? S.profile.display_name : 'Account';
+  el.innerHTML = '<button class="me-btn" id="nav-me" data-role="' + esc(S.profile ? S.profile.role : 'athlete') + '" aria-label="Your account">' +
+    '<span class="me-name">' + esc(name) + '</span><span class="me-init" aria-hidden="true">' + esc(initials(name)) + '</span></button>';
+  $('#nav-me').onclick = openProfile;
+}
+
+/* ── Day ─────────────────────────────────────────────── */
+async function loadDay(iso, keepDrafts) {
+  const seq = ++S.loadSeq;
+  if (iso !== S.day || !keepDrafts) { S.editing = {}; S.drafts = {}; }
+  S.day = iso;
+  S.loading = true;
+  renderWeek();
+  renderTitle();
+  if (!keepDrafts) $('#day-body').innerHTML = '<div class="loading">Loading</div>';
+
+  const wk = mondayOf(iso);
+  const [dayR, calR, myR] = await Promise.all([
+    S.api.getDay(iso),
+    S.api.getCalendar(wk, addDays(wk, 6)),
+    signedIn() ? S.api.getMyDay(iso) : Promise.resolve({ data: null }),
+  ]);
+  if (seq !== S.loadSeq) return;
+
+  if (dayR.error) {
+    S.loading = false; S.dayData = null; renderTitle();
+    $('#day-body').innerHTML = '<div class="plain-card"><h2 class="plain-title">Training didn’t load</h2><p>' + esc(dayR.error.message || 'Check your connection and try again.') +
+      '</p><div class="acts"><button class="btn-primary btn-sm" data-act="retry">Try again</button></div></div>';
+    return;
+  }
+  S.loading = false;
+  S.dayData = dayR.data;
+  S.cal = calR.data || [];
+  S.my = myR.data || { scores: {}, feel: null };
+  renderWeek();
+  renderTitle();
+  renderBody();
+  if (S.pendingKey && signedIn()) {
+    const k = S.pendingKey; S.pendingKey = null;
+    const card = document.querySelector('.card[data-key="' + k + '"]');
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function lockedForVisitor(iso) {
+  const n = S.settings.public_days_ahead;
+  return !signedIn() && n !== null && n !== undefined && iso > addDays(todayISO(), n);
+}
+
+function renderTitle() {
+  const st = $('#status'), d = S.dayData;
+  let tone = 'train', label = 'Training day';
+  if (S.loading) { tone = 'empty'; label = '\u00a0'; }
+  else if (!d && lockedForVisitor(S.day)) { tone = 'locked'; label = 'Members only'; }
+  else if (!d) { tone = 'empty'; label = 'Nothing posted'; }
+  else if (d.is_rest_day) { tone = 'rest'; label = 'Rest day'; }
+  else if (d.status === 'wip') { tone = 'wip'; label = 'Still being written'; }
+  if (S.day === todayISO() && !S.loading) label = (tone === 'train' ? 'Today' : label + ' · Today');
+  st.dataset.tone = tone; st.textContent = label;
+  $('#day-title').innerHTML = esc(fmt(S.day, { weekday: 'long' })) + '<em>' + esc(fmt(S.day, { month: 'short', day: 'numeric' })) + '</em>';
+  document.title = fmt(S.day, { weekday: 'short', month: 'short', day: 'numeric' }) + ' · ' + CONFIG.APP_NAME;
+}
+
+function renderWeek() {
+  const wk = mondayOf(S.day), today = todayISO();
+  const days = Array.from({ length: 7 }, (_, i) => addDays(wk, i));
+  const byDay = {}; S.cal.forEach(c => { byDay[c.day] = c; });
+  const a = dateOf(days[0]), b = dateOf(days[6]);
+  $('#week-label').textContent = a.getMonth() === b.getMonth()
+    ? fmt(days[0], { month: 'long', year: 'numeric' })
+    : fmt(days[0], { month: 'short' }) + ' – ' + fmt(days[6], { month: 'short', year: 'numeric' });
+  $('#wk-today').disabled = S.day === today;
+  $('#week').innerHTML = days.map(iso => {
+    const c = byDay[iso];
+    const attrs = (c ? (c.is_rest_day ? ' data-rest' : '') : ' data-none') + (iso === today ? ' data-today' : '') + (iso === S.day ? ' aria-current="date"' : '');
+    const label = fmt(iso, { weekday: 'long', month: 'long', day: 'numeric' }) + (c ? (c.is_rest_day ? ', rest day' : ', training') : ', nothing posted');
+    return '<button class="wk" data-day="' + iso + '"' + attrs + ' aria-label="' + esc(label) + '">' +
+      '<span class="wk-dow">' + esc(fmt(iso, { weekday: 'short' })) + '</span><span class="wk-num">' + dateOf(iso).getDate() + '</span></button>';
+  }).join('');
+  document.querySelectorAll('#week .wk').forEach(btn => { btn.onclick = () => { location.hash = btn.dataset.day; }; });
+}
+
+function renderBody() {
+  const el = $('#day-body'), d = S.dayData;
+  if (!d) {
+    el.innerHTML = lockedForVisitor(S.day)
+      ? '<div class="plain-card plain-card--grad"><h2 class="plain-title">Sign in to see this day</h2><p>Upcoming training is visible to members. Creating an account is free, and it also lets you log scores and see leaderboards.</p>' +
+        '<div class="acts"><button class="btn-primary btn-sm" data-act="auth" data-mode="signup">Create account</button><button class="btn-ghost btn-sm" data-act="auth" data-mode="signin">Sign in</button></div></div>'
+      : '<div class="plain-card"><h2 class="plain-title">No training posted</h2><p>Nothing is programmed for this date yet. Pick another day above.</p>' +
+        (S.day !== todayISO() ? '<div class="acts"><button class="btn-ghost btn-sm" data-act="today">Go to today</button></div>' : '') + '</div>';
+    return;
+  }
+  if (d.is_rest_day) {
+    el.innerHTML = '<div class="plain-card plain-card--grad"><h2 class="plain-title">Rest day</h2><p>Recovery is part of the program.</p></div>';
+    return;
+  }
+  let html = '';
+  if (d.status === 'wip') html += '<div class="note note--wip"><b>Your coach is still writing this day.</b> You can train and log scores, but sections may change.</div>';
+  if (d.daily_note) html += '<div class="note">' + linkify(esc(d.daily_note)) + '</div>';
+  if (d.coach_notes && d.coach_notes.day) html += '<div class="day-notes">' + notesHTML(S.day + '-day', d.coach_notes.day, 'Coach’s notes for today') + '</div>';
+
+  const secs = allSections(), scored = secs.filter(s => s.score.type !== 'none');
+  if (signedIn() && scored.length) {
+    const done = scored.filter(s => S.my.scores[s.key]).length;
+    html += '<div class="progress">Logged <strong>' + done + '</strong> of ' + scored.length + '</div>';
+  }
+  let idx = 0;
+  d.blocks.forEach(b => {
+    if (d.blocks.length > 1) html += '<h2 class="blk">' + esc(b.label) + '</h2>';
+    b.sections.forEach(sec => { html += cardHTML(sec, idx++); });
+  });
+
+  if (signedIn() && scored.length) {
+    html += '<section class="plain-card" aria-labelledby="feel-t"><h2 class="plain-title" id="feel-t">How did today feel?</h2><div class="feel-row"><div class="seg" role="group" aria-label="Rate today from 1 to 5">' +
+      [1, 2, 3, 4, 5].map(n => '<button data-act="feel" data-v="' + n + '" aria-pressed="' + (S.my.feel === n) + '">' + n + '</button>').join('') +
+      '</div><div class="feel-ends"><span>Rough</span><span>Great</span></div></div></section>';
+  } else if (!signedIn() && scored.length) {
+    html += '<div class="plain-card plain-card--grad"><h2 class="plain-title">Log your training</h2><p>Create a free account to save your scores, see how everyone did, and comment on results.</p>' +
+      '<div class="acts"><button class="btn-primary btn-sm" data-act="auth" data-mode="signup">Create account</button><button class="btn-ghost btn-sm" data-act="auth" data-mode="signin">Sign in</button></div></div>';
+  }
+  el.innerHTML = html;
+
+  if (S.justLogged) {
+    const card = el.querySelector('.card[data-key="' + S.justLogged + '"]');
+    if (card) {
+      card.dataset.state = 'open';
+      requestAnimationFrame(() => requestAnimationFrame(() => { card.dataset.state = 'logged'; }));
+      const sc = card.querySelector('.logged-score'); if (sc) sc.classList.add('stamp');
+    }
+    S.justLogged = null;
+  }
+}
+
+/* ── Result slots ────────────────────────────────────────
+   A slot is one place a result is shown or entered:
+     me:<key>               your own result on a workout card
+     coach:<userId>:<key>   a coach adding or editing someone's result in the edit sheet
+   Drafts and editing flags are kept per slot, so the same editor serves both. */
+const slots = {};
+
+function mySlot(key) {
+  const id = 'me:' + key;
+  return slots[id] || (slots[id] = {
+    id, key, userId: null, own: true,
+    sec: () => sectionByKey(key),
+    row: () => S.my.scores[key],
+    root: () => document.querySelector('.card[data-slot="' + id + '"]'),
+    rerender: () => rerenderCard(key),
+    saved: row => { S.my.scores[key] = row; animateLogged(key); refreshProgress(); toast('Score saved'); },
+    removed: () => { delete S.my.scores[key]; rerenderCard(key); refreshProgress(); toast('Score removed'); },
+  });
+}
+
+/* ── Coach's notes ───────────────────────────────────── */
+function notesHTML(id, text, label) {
+  const open = !!S.notesOpen[id];
+  const coachesOnly = isCoach() && S.settings.coach_notes_visibility === 'coaches';
+  return '<div class="notes-row"><button type="button" class="notes-btn" data-act="notes" data-notes="' + esc(id) + '" aria-expanded="' + open + '" aria-controls="notes-' + esc(id) + '">' + esc(label) + '</button></div>' +
+    '<div class="coach-notes" id="notes-' + esc(id) + '"' + (open ? '' : ' hidden') + '>' +
+      (coachesOnly ? '<span class="tag tag--quiet notes-vis">Coaches only</span>' : '') +
+      '<div class="coach-notes-text">' + linkify(esc(text)) + '</div></div>';
+}
+
+/* ── Section card ────────────────────────────────────── */
+function boardVisible(sec) {
+  if (sec.score.type === 'none' || !signedIn()) return false;
+  return sec.leaderboard === 'on' || isCoach();
+}
+
+function cardHTML(sec, i) {
+  const spec = sec.score;
+  const scored = spec.type !== 'none';
+  const slot = mySlot(sec.key);
+  const row = slot.row();
+  const state = !scored ? 'unscored' : row ? 'logged' : 'open';
+  const body = (sec.text || '').split('\n').slice(1).join('\n').trim();
+  const fmtLine = !scored ? 'No score' : spec.implicit ? 'Notes' : TD.describeSpec(spec);
+
+  let panel = '';
+  if (scored) {
+    if (!signedIn()) panel = '<div class="panel panel--visitor"><button class="text-btn" data-act="auth" data-mode="signin">Sign in to log your score</button></div>';
+    else if (row && !S.editing[slot.id]) panel = '<div class="panel">' + loggedHTML(slot) + '</div>';
+    else panel = '<div class="panel">' + editorHTML(slot) + '</div>';
+  }
+
+  return '<article class="card" data-key="' + esc(sec.key) + '" data-slot="' + esc(slot.id) + '" data-state="' + state + '" style="--accent:' + ACCENTS[i % 4][0] + ';--accent-ink:' + ACCENTS[i % 4][1] + '">' +
+    '<div class="card-hd"><div class="card-key">' + esc(sec.key) + '</div><h3 class="card-title">' + esc(sec.title || 'Section ' + sec.key) + '</h3>' +
+    '<div class="card-fmt">' + esc(fmtLine) + '</div></div>' +
+    (body ? '<div class="card-text">' + linkify(esc(body)) + '</div>' : '<div style="height:18px"></div>') +
+    (S.dayData && S.dayData.coach_notes && S.dayData.coach_notes[sec.key] ? '<div class="card-notes">' + notesHTML(S.day + '-' + sec.key, S.dayData.coach_notes[sec.key], 'Coach’s notes') + '</div>' : '') +
+    panel + '</article>';
+}
+
+function setChips(row) {
+  const spec = row.score_spec || {};
+  if ((row.sets || []).length < 2) return '';
+  return '<div class="set-list" aria-label="Sets">' + row.sets.map(s => {
+    let t = '';
+    if (s.seconds != null) t = TD.formatTime(s.seconds);
+    else if (s.rounds != null) t = s.rounds + ' + ' + s.reps;
+    else if (s.value != null) t = s.value + (spec.type === 'load' ? ' ' + (s.unit || '') : '');
+    return '<span class="set-chip"' + (s.missed ? ' data-missed aria-label="' + esc(t) + ' missed"' : '') + '>' + esc(t) + '</span>';
+  }).join('') + '</div>';
+}
+
+function loggedHTML(slot) {
+  const sec = slot.sec(), row = slot.row(), T = TD.TYPES[sec.score.type];
+  let score = esc(row.display);
+  if (sec.score.type === 'check') score = 'Done';
+  if (sec.score.type === 'text') score = '';
+  return '<div class="logged">' +
+    (score ? '<div class="logged-score"' + (row.is_capped ? ' data-capped' : '') + '>' + score + '</div>' : '') +
+    '<div class="logged-meta">' + (T.ranked ? '<span class="tag" data-v="' + esc(row.level) + '">' + (row.level === 'scaled' ? 'Scaled' : 'RX') + '</span>' : '') + '</div>' +
+    setChips(row) +
+    (sec.score.type === 'text' ? '<div class="logged-notes" style="font-style:normal">' + esc((row.sets[0] || {}).text) + '</div>' : '') +
+    (row.notes ? '<div class="logged-notes">' + esc(row.notes) + '</div>' : '') +
+    (row.edited_by ? '<p class="edited">Edited by ' + esc(row.editor && row.editor.display_name ? row.editor.display_name : 'a coach') + '</p>' : '') +
+    '<div class="logged-acts">' +
+      (boardVisible(sec) ? '<button class="btn-primary btn-sm" data-act="board">Leaderboard</button>' : '') +
+      '<button class="btn-ghost btn-sm" data-act="edit">Edit score</button>' +
+    '</div></div>';
+}
+
+/* Draft model: { level, unit, capped, notes, raw: [{ m, s, rounds, reps, value, missed, text }] } */
+function draftFromRow(sec, row) {
+  const spec = TD.normalizeSpec(sec.score);
+  const d = { level: 'rx', unit: (S.profile && S.profile.unit_pref) || spec.unit || 'lb', capped: false, notes: '', raw: [] };
+  for (let i = 0; i < spec.sets; i++) d.raw.push({ m: '', s: '', rounds: '', reps: '', value: '', missed: false, text: '' });
+  if (!row) return d;
+  d.level = row.level || 'rx'; d.notes = row.notes || '';
+  (row.sets || []).forEach((st, i) => {
+    const r = d.raw[i] || (d.raw[i] = {});
+    if (st.capped) { d.capped = true; r.reps = st.reps ?? ''; r.rounds = st.rounds ?? ''; }
+    if (st.seconds != null) { r.m = String(Math.floor(st.seconds / 60)); r.s = String(Math.round((st.seconds % 60) * 100) / 100).padStart(2, '0'); }
+    if (st.rounds != null && !st.capped) { r.rounds = st.rounds; r.reps = st.reps; }
+    if (st.value != null) r.value = st.value;
+    if (st.unit) d.unit = st.unit;
+    if (st.missed) r.missed = true;
+    if (st.text) r.text = st.text;
+  });
+  return d;
+}
+
+function readDraft(slot) {
+  const root = slot.root();
+  const d = S.drafts[slot.id] || draftFromRow(slot.sec(), slot.row());
+  if (root) {
+    const q = (f, i) => { const el = root.querySelector('[data-f="' + f + '"][data-i="' + i + '"]'); return el ? el.value.trim() : undefined; };
+    d.raw.forEach((r, i) => { ['m', 's', 'rounds', 'reps', 'value', 'text'].forEach(f => { const v = q(f, i); if (v !== undefined) r[f] = v; }); });
+    const notes = root.querySelector('[data-f="notes"]'); if (notes) d.notes = notes.value;
+  }
+  S.drafts[slot.id] = d;
+  return d;
+}
+
+function cell(label, f, i, val, opts) {
+  opts = opts || {};
+  const id = 'in-' + f + '-' + i + '-' + Math.random().toString(36).slice(2, 7);
+  return '<div class="cell"><label for="' + id + '">' + esc(label) + '</label><input id="' + id + '" data-f="' + f + '" data-i="' + i + '" value="' + esc(val) + '" inputmode="' + (opts.decimal ? 'decimal' : 'numeric') +
+    '" autocomplete="off" placeholder="' + (opts.ph || '0') + '" maxlength="' + (opts.max || 6) + '">' + (opts.after || '') + '</div>';
+}
+
+function editorHTML(slot) {
+  const sec = slot.sec(), row = slot.row();
+  const spec = TD.normalizeSpec(sec.score), T = TD.TYPES[spec.type];
+  const d = S.drafts[slot.id] || (S.drafts[slot.id] = draftFromRow(sec, row));
+  const err = '<p class="err" data-err role="alert"></p>';
+  const acts = label => '<div class="entry-acts"><button class="btn-primary btn-sm" data-act="save">' + label + '</button>' +
+    (slot.own
+      ? (row ? '<button class="text-btn text-btn--quiet" data-act="cancel">Cancel</button><button class="text-btn text-btn--danger" data-act="remove">Remove score</button>' : '')
+      : '<button class="text-btn text-btn--quiet" data-act="cancel">Cancel</button>' + (row ? '<button class="text-btn text-btn--danger" data-act="remove">Delete result</button>' : '')) +
+    '</div>' + err;
+
+  if (spec.type === 'check') {
+    return '<div class="panel-row"><button class="btn-primary btn-sm" data-act="check">Mark as done</button>' +
+      (slot.own && boardVisible(sec) ? '<button class="text-btn" data-act="board">See who’s done it</button>' : '') +
+      (!slot.own && row ? '<button class="text-btn text-btn--danger" data-act="remove">Delete result</button>' : '') + '</div>' + err;
+  }
+  if (spec.type === 'emoji') {
+    const faces = ['😞', '🙁', '😐', '🙂', '😃'], cur = row && row.sets[0] ? row.sets[0].rating : null;
+    return '<div class="faces" role="group" aria-label="Rate from 1 to 5">' + faces.map((f, n) =>
+      '<button class="face" data-act="rate" data-v="' + (n + 1) + '" aria-pressed="' + (cur === n + 1) + '" aria-label="' + (n + 1) + ' of 5">' + f + '<small>' + (n + 1) + '</small></button>').join('') +
+      '</div>' + (!slot.own && row ? '<div class="entry-acts"><button class="text-btn text-btn--danger" data-act="remove">Delete result</button></div>' : '') + err;
+  }
+  if (spec.type === 'text') {
+    return '<label class="field" style="margin-top:0"><span>' + (slot.own ? 'Your result' : 'Result') + '</span><textarea class="input" data-f="text" data-i="0" rows="3" placeholder="Weights, reps, how it went">' + esc(d.raw[0].text) + '</textarea></label>' + acts('Save');
+  }
+
+  let top = '<div class="entry-top"><div class="seg seg--sm" role="group" aria-label="Division">' +
+    '<button data-act="level" data-v="rx" aria-pressed="' + (d.level === 'rx') + '">RX</button>' +
+    '<button data-act="level" data-v="scaled" aria-pressed="' + (d.level === 'scaled') + '">Scaled</button></div>';
+  if (spec.type === 'load') top += '<div class="seg seg--sm" role="group" aria-label="Unit">' +
+    ['lb', 'kg'].map(u => '<button data-act="unit" data-v="' + u + '" aria-pressed="' + (d.unit === u) + '">' + u + '</button>').join('') + '</div>';
+  top += '</div>';
+
+  let cells = '';
+  const multi = spec.sets > 1;
+  if (spec.type === 'time' && spec.cap && d.capped) {
+    cells = '<div class="cells">' + (spec.capScore === 'rr' ? cell('Rounds', 'rounds', 0, d.raw[0].rounds) : '') + cell('Reps at the cap', 'reps', 0, d.raw[0].reps) + '</div>';
+  } else if (spec.type === 'time') {
+    cells = multi
+      ? d.raw.map((r, i) => '<div class="set-row"><span class="set-n">Set ' + (i + 1) + '</span>' + cell('Min', 'm', i, r.m, { max: 3 }) + '<span class="colon">:</span>' + cell('Sec', 's', i, r.s, { max: 5, ph: '00', decimal: true }) + '</div>').join('')
+      : '<div class="cells">' + cell('Minutes', 'm', 0, d.raw[0].m, { max: 3 }) + '<span class="colon" aria-hidden="true">:</span>' + cell('Seconds', 's', 0, d.raw[0].s, { max: 5, ph: '00', decimal: true }) + '</div>';
+  } else if (spec.type === 'rr') {
+    cells = multi
+      ? d.raw.map((r, i) => '<div class="set-row"><span class="set-n">Set ' + (i + 1) + '</span>' + cell('Rounds', 'rounds', i, r.rounds) + '<span class="colon">+</span>' + cell('Reps', 'reps', i, r.reps) + '</div>').join('')
+      : '<div class="cells">' + cell('Rounds', 'rounds', 0, d.raw[0].rounds) + '<span class="colon" aria-hidden="true">+</span>' + cell('Reps', 'reps', 0, d.raw[0].reps) + '</div>';
+  } else {
+    const unit = spec.type === 'load' ? d.unit : T.unit;
+    const decimal = T.input === 'decimal';
+    if (multi) {
+      cells = '<div class="sets-grid">' + d.raw.map((r, i) => cell('Set ' + (i + 1), 'value', i, r.value, {
+        decimal, max: 7,
+        after: spec.type === 'load' ? '<button class="miss" data-act="miss" data-i="' + i + '" aria-pressed="' + !!r.missed + '" aria-label="Set ' + (i + 1) + ' missed">' + (r.missed ? 'Missed' : 'Miss?') + '</button>' : '',
+      })).join('') + '</div>';
+    } else {
+      cells = '<div class="cells">' + cell(unit ? unit : T.label, 'value', 0, d.raw[0].value, { decimal, max: 7 }) + '</div>';
+    }
+  }
+
+  const capToggle = spec.type === 'time' && spec.cap
+    ? '<label class="cap-toggle"><input type="checkbox" data-act="capped"' + (d.capped ? ' checked' : '') + '> ' + (slot.own ? 'I hit' : 'Hit') + ' the <b>' + esc(TD.formatTime(spec.cap)) + '</b> cap</label>' : '';
+
+  return top + cells + capToggle +
+    '<label class="field"><span>Notes (optional)</span><textarea class="input" data-f="notes" rows="2" placeholder="Scaling, how it felt, what to try next time">' + esc(d.notes) + '</textarea></label>' +
+    acts(row ? 'Save changes' : slot.own ? 'Save score' : 'Add result');
+}
+
+function entryFromDraft(sec, d) {
+  const spec = TD.normalizeSpec(sec.score);
+  const entry = { level: d.level, unit: d.unit, notes: d.notes, sets: [] };
+  const errors = [];
+  if (spec.type === 'time' && spec.cap && d.capped) {
+    entry.sets = [{ capped: true, reps: d.raw[0].reps, rounds: d.raw[0].rounds }];
+  } else if (spec.type === 'time') {
+    entry.sets = d.raw.map((r, i) => {
+      if (r.m === '' && r.s === '') return {};
+      const sec2 = r.s === '' ? 0 : Number(r.s);
+      if (!(sec2 >= 0 && sec2 < 60)) errors.push((spec.sets > 1 ? 'Set ' + (i + 1) + ': ' : '') + 'Seconds must be between 0 and 59');
+      return { time: (Number(r.m) || 0) * 60 + (sec2 || 0) };
+    });
+  } else if (spec.type === 'rr') {
+    entry.sets = d.raw.map(r => (r.rounds === '' && r.reps === '' ? {} : { rounds: r.rounds === '' ? 0 : r.rounds, reps: r.reps === '' ? 0 : r.reps }));
+  } else if (spec.type === 'text') {
+    entry.sets = [{ text: d.raw[0].text }];
+  } else {
+    entry.sets = d.raw.map(r => ({ value: r.value, unit: d.unit, missed: !!r.missed }));
+  }
+  return { entry, errors };
+}
+
+// Redraw only the scoring panel: a playing video or open notes in the card stay untouched
+function rerenderCard(key) {
+  const sec = sectionByKey(key); if (!sec) return;
+  const card = document.querySelector('.card[data-key="' + key + '"]'); if (!card) return;
+  const tmp = document.createElement('div'); tmp.innerHTML = cardHTML(sec, allSections().indexOf(sec));
+  const fresh = tmp.firstChild;
+  card.dataset.state = fresh.dataset.state;
+  const oldPanel = card.querySelector(':scope > .panel'), newPanel = fresh.querySelector(':scope > .panel');
+  if (oldPanel && newPanel) oldPanel.replaceWith(newPanel);
+  else if (oldPanel) oldPanel.remove();
+  else if (newPanel) card.appendChild(newPanel);
+}
+
+function animateLogged(key) {
+  rerenderCard(key);
+  const fresh = document.querySelector('.card[data-key="' + key + '"]');
+  if (!fresh) return;
+  fresh.dataset.state = 'open';
+  requestAnimationFrame(() => requestAnimationFrame(() => { fresh.dataset.state = 'logged'; }));
+  const sc = fresh.querySelector('.logged-score'); if (sc) sc.classList.add('stamp');
+}
+
+function refreshProgress() {
+  const p = $('#day-body .progress'); if (!p) return;
+  const scored = allSections().filter(s => s.score.type !== 'none');
+  p.innerHTML = 'Logged <strong>' + scored.filter(s => S.my.scores[s.key]).length + '</strong> of ' + scored.length;
+}
+
+function showErr(slot, msg) { const root = slot.root(); const e = root && root.querySelector('[data-err]'); if (e) e.textContent = msg; }
+
+async function submitEntry(slot, entry) {
+  const root = slot.root();
+  const btns = root ? root.querySelectorAll('[data-act="save"],[data-act="check"],.face') : [];
+  btns.forEach(b => { b.disabled = true; });
+  const r = await S.api.saveScore(S.day, slot.sec(), entry, slot.userId ? { userId: slot.userId } : undefined);
+  btns.forEach(b => { b.disabled = false; });
+  if (r.error) {
+    if (r.error.code === 'auth_required') return openAuth('signin', slot.key);
+    return showErr(slot, r.error.message || 'That result didn’t save. Try again.');
+  }
+  delete S.editing[slot.id]; delete S.drafts[slot.id];
+  slot.saved(r.data);
+}
+
+async function saveSlot(slot) {
+  const { entry, errors } = entryFromDraft(slot.sec(), readDraft(slot));
+  if (errors.length) return showErr(slot, errors.join(' · '));
+  await submitEntry(slot, entry);
+}
+
+async function removeSlot(slot) {
+  const row = slot.row();
+  const r = slot.own ? await S.api.deleteScore(S.day, slot.key) : await S.api.deleteScoreById(row.id);
+  if (r.error) return showErr(slot, r.error.message);
+  delete S.editing[slot.id]; delete S.drafts[slot.id];
+  slot.removed();
+}
+
+// One handler for workout cards and the coach edit sheet
+async function onEntryClick(e) {
+  const t = e.target.closest('[data-act]'); if (!t) return;
+  const act = t.dataset.act;
+  const host = t.closest('[data-slot]');
+  const slot = host ? slots[host.dataset.slot] : null;
+
+  switch (act) {
+    case 'retry': return loadDay(S.day);
+    case 'today': location.hash = todayISO(); return;
+    case 'video': return toggleVideo(t);
+    case 'notes': {
+      const id = t.dataset.notes, panel = document.getElementById('notes-' + id), open = t.getAttribute('aria-expanded') !== 'true';
+      S.notesOpen[id] = open; t.setAttribute('aria-expanded', String(open)); if (panel) panel.hidden = !open;
+      return;
+    }
+    case 'auth': return openAuth(t.dataset.mode || 'signin', slot && slot.key);
+    case 'board': return slot && openBoard(slot.sec());
+    case 'feel': {
+      const v = Number(t.dataset.v), prev = S.my.feel;
+      S.my.feel = v;
+      t.parentElement.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.v) === v)));
+      const r = await S.api.setFeel(S.day, v);
+      if (r.error) { S.my.feel = prev; toast('Couldn’t save that. Try again.'); renderBody(); }
+      return;
+    }
+  }
+  if (!slot) return;
+
+  switch (act) {
+    case 'edit': {
+      S.editing[slot.id] = true; delete S.drafts[slot.id]; slot.rerender();
+      const f = slot.root() && slot.root().querySelector('.cell input, textarea'); if (f) f.focus();
+      return;
+    }
+    case 'cancel':
+      delete S.editing[slot.id]; delete S.drafts[slot.id];
+      if (slot.own) slot.rerender(); else $('#dlg-edit').close();
+      return;
+    case 'save': return saveSlot(slot);
+    case 'check': return submitEntry(slot, { sets: [{ done: true }] });
+    case 'rate': return submitEntry(slot, { sets: [{ rating: Number(t.dataset.v) }] });
+    case 'remove': {
+      if (!slot.own && t.dataset.confirm !== 'yes') {
+        t.dataset.confirm = 'yes'; t.textContent = 'Confirm delete';
+        setTimeout(() => { if (t.isConnected) { t.dataset.confirm = ''; t.textContent = 'Delete result'; } }, 4000);
+        return;
+      }
+      return removeSlot(slot);
+    }
+    case 'level': case 'unit': case 'miss': {
+      const d = readDraft(slot);
+      if (act === 'level') d.level = t.dataset.v;
+      if (act === 'unit') d.unit = t.dataset.v;
+      if (act === 'miss') { const r = d.raw[Number(t.dataset.i)]; r.missed = !r.missed; }
+      S.editing[slot.id] = true;
+      slot.rerender();
+      return;
+    }
+    case 'capped': {
+      const d = readDraft(slot); d.capped = t.checked; S.editing[slot.id] = true; slot.rerender();
+      const f = slot.root() && slot.root().querySelector('.cell input'); if (f) f.focus();
+      return;
+    }
+  }
+}
+
+function onEntryKey(e) {
+  if (e.key !== 'Enter' || !e.target.matches('.cell input')) return;
+  const host = e.target.closest('[data-slot]'); const slot = host && slots[host.dataset.slot];
+  if (slot) { e.preventDefault(); saveSlot(slot); }
+}
+
+/* ── Coach: add or edit someone's result ─────────────── */
+async function openCoachEditor(sec, person, scoreId, host) {
+  const dlg = $('#dlg-edit');
+  $('#edit-sub').textContent = fmt(S.day, { weekday: 'short', month: 'short', day: 'numeric' }) + ' · ' + sec.key + ' · ' + (sec.title || '');
+  $('#edit-title').textContent = (scoreId ? 'Edit ' : 'Add a result for ') + (person.display_name || 'athlete') + (scoreId ? '’s result' : '');
+  host = host || $('#edit-bd');
+  if (!dlg.open) dlg.showModal();
+  host.innerHTML = '<div class="loading">Loading</div>';
+
+  let row = null;
+  if (scoreId) {
+    const r = await S.api.getScore(scoreId);
+    if (r.error || !r.data) { host.innerHTML = '<p class="empty">That result couldn’t be loaded. ' + esc(r.error ? r.error.message : 'It may have been deleted.') + '</p>'; return; }
+    row = r.data;
+  }
+  const id = 'coach:' + person.id + ':' + sec.key;
+  delete S.drafts[id];
+  slots[id] = {
+    id, key: sec.key, userId: person.id, own: false,
+    sec: () => sec, row: () => row,
+    root: () => document.querySelector('#dlg-edit [data-slot="' + id + '"]'),
+    rerender: () => {
+      const ac = ACCENTS[Math.max(0, allSections().indexOf(sectionByKey(sec.key))) % 4];
+      host.innerHTML = '<div data-slot="' + esc(id) + '" style="--accent:' + ac[0] + ';--accent-ink:' + ac[1] + '">' +
+        (row && row.edited_by === (S.profile && S.profile.id) ? '' : row ? '<p class="board-note">Saving marks this result as edited by you. ' + esc(person.display_name) + ' will see that.</p>' : '') +
+        editorHTML(slots[id]) + '</div>';
+    },
+    saved: saved => { dlg.close(); afterCoachChange(person.id, sec.key, saved); toast(row ? 'Result updated' : 'Result added'); },
+    removed: () => { dlg.close(); afterCoachChange(person.id, sec.key, null); toast('Result deleted'); },
+  };
+  slots[id].rerender();
+  const f = host.querySelector('.cell input, textarea'); if (f) f.focus();
+}
+
+async function openCoachAdd(sec) {
+  const dlg = $('#dlg-edit');
+  $('#edit-sub').textContent = fmt(S.day, { weekday: 'short', month: 'short', day: 'numeric' }) + ' · ' + sec.key + ' · ' + (sec.title || '');
+  $('#edit-title').textContent = 'Add a result';
+  $('#edit-bd').innerHTML = '<div class="loading">Loading people</div>';
+  dlg.showModal();
+  const [people, existing] = await Promise.all([S.api.listPeople(), S.api.getLeaderboard(S.day, sec.key)]);
+  if (people.error) { $('#edit-bd').innerHTML = '<p class="empty">' + esc(people.error.message) + '</p>'; return; }
+  const have = {}; (existing.data || []).forEach(r => { have[r.user_id] = r.score_id; });
+  $('#edit-bd').innerHTML = '<label class="field" style="margin-top:0"><span>Athlete</span><select class="input" id="cp-person"><option value="">Choose someone</option>' +
+    people.data.map(p => '<option value="' + esc(p.id) + '">' + esc(p.display_name) + (have[p.id] ? ' (has a result)' : '') + '</option>').join('') +
+    '</select></label><div id="cp-host" style="margin-top:16px"></div>';
+  $('#cp-person').onchange = e => {
+    const p = people.data.find(x => x.id === e.target.value);
+    if (!p) { $('#cp-host').innerHTML = ''; return; }
+    openCoachEditor(sec, p, have[p.id] || null, $('#cp-host')).then(() => {
+      $('#edit-title').textContent = have[p.id] ? 'Edit ' + p.display_name + '’s result' : 'Add a result for ' + p.display_name;
+    });
+  };
+  $('#cp-person').focus();
+}
+
+function afterCoachChange(userId, key, row) {
+  if (S.profile && userId === S.profile.id && S.dayData && sectionByKey(key)) {
+    if (row) S.my.scores[key] = row; else delete S.my.scores[key];
+    rerenderCard(key); refreshProgress();
+  }
+  if (S.board && S.board.sec.key === key) loadBoard();
+}
+
+/* ── Leaderboard ─────────────────────────────────────── */
+function openBoard(sec) {
+  if (!sec) return;
+  const mine = S.my.scores[sec.key];
+  S.board = { sec, level: TD.TYPES[sec.score.type].ranked ? (mine ? mine.level : 'rx') : null, division: '', rows: [], open: {}, confirm: null };
+  $('#board-sub').textContent = fmt(S.day, { weekday: 'long', month: 'short', day: 'numeric' }) + ' · ' + sec.key;
+  $('#board-title').textContent = sec.title || 'Leaderboard';
+  $('#dlg-board').showModal();
+  loadBoard();
+}
+
+async function loadBoard() {
+  const b = S.board; if (!b) return;
+  if (!b.rows.length) $('#board-bd').innerHTML = controlsHTML() + '<div class="loading">Loading</div>';
+  const r = await S.api.getLeaderboard(S.day, b.sec.key, { level: b.level || undefined, division: b.division || undefined });
+  if (S.board !== b) return;
+  if (r.error) { $('#board-bd').innerHTML = controlsHTML() + '<p class="empty">The leaderboard didn’t load. ' + esc(r.error.message) + '</p>'; return; }
+  b.rows = r.data || [];
+  renderBoard();
+}
+
+function controlsHTML() {
+  const b = S.board, ranked = TD.TYPES[b.sec.score.type].ranked;
+  let h = '<div class="board-controls">';
+  if (ranked) h += '<div class="seg seg--sm" role="group" aria-label="Division">' +
+    ['rx', 'scaled'].map(v => '<button data-bact="level" data-v="' + v + '" aria-pressed="' + (b.level === v) + '">' + (v === 'rx' ? 'RX' : 'Scaled') + '</button>').join('') + '</div>';
+  if (CONFIG.DIVISIONS.length) h += '<div class="seg seg--sm" role="group" aria-label="Filter">' +
+    [''].concat(CONFIG.DIVISIONS).map(v => '<button data-bact="division" data-v="' + esc(v) + '" aria-pressed="' + (b.division === v) + '">' + (v ? esc(v) : 'All') + '</button>').join('') + '</div>';
+  h += '</div>';
+  if (isCoach()) h += '<div class="coach-bar"><span>Coach</span><button class="text-btn" data-bact="add">Add a result for someone</button></div>';
+  if (b.sec.leaderboard === 'coach') h += '<p class="board-note">Coach-only section. Athletes see just their own score, and comments here stay between coaches and the athlete.</p>';
+  else if (b.sec.leaderboard === 'off') h += '<p class="board-note">Private section. Athletes see only their own score; you’re seeing everyone because you’re a coach.</p>';
+  return h;
+}
+
+function renderBoard() {
+  const b = S.board, meId = S.profile && S.profile.id, coach = isCoach();
+  let h = controlsHTML();
+  if (!b.rows.length) {
+    h += '<p class="empty">' + (S.my.scores[b.sec.key] ? 'No one else has logged a score here yet.' : 'No scores yet. Log yours and you’ll be first on the board.') + '</p>';
+  } else {
+    h += '<ol class="board">' + b.rows.map(r => {
+      const sub = [r.division, r.level === 'scaled' && !b.level ? 'Scaled' : null, r.notes].filter(Boolean).join(' · ');
+      const val = b.sec.score.type === 'check' ? '✓' : r.display;
+      const open = b.open[r.score_id];
+      const confirming = b.confirm === r.score_id;
+      return '<li class="row"' + (r.user_id === meId ? ' data-me' : '') + ' data-id="' + esc(r.score_id) + '">' +
+        '<span class="place" data-p="' + (r.place || '') + '">' + (r.place || '–') + '</span>' +
+        '<div class="who"><b>' + esc(r.display_name || 'Athlete') + (r.user_id === meId ? ' (you)' : '') + '</b>' +
+          (sub ? '<small>' + esc(sub) + '</small>' : '') +
+          (r.edited_by_name ? '<small class="edited-by">Edited by ' + esc(r.edited_by_name) + '</small>' : '') + '</div>' +
+        '<span class="val"' + (r.is_capped ? ' data-capped' : '') + '>' + esc(val) + '</span>' +
+        '<div class="row-acts">' +
+          '<button class="like" data-bact="like" aria-pressed="' + !!r.liked_by_me + '" aria-label="' + (r.liked_by_me ? 'Remove like' : 'Like') + ' for ' + esc(r.display_name) + '"><span aria-hidden="true">✦</span>' + (r.like_count || 0) + '</button>' +
+          '<button class="like" data-bact="comments" aria-expanded="' + !!open + '">' + (r.comment_count ? r.comment_count + (r.comment_count === 1 ? ' comment' : ' comments') : 'Comment') + '</button>' +
+          (coach ? '<span class="row-coach"><button class="like" data-bact="edit">Edit</button>' +
+            '<button class="like like--danger" data-bact="delete"' + (confirming ? ' data-confirm="yes"' : '') + '>' + (confirming ? 'Confirm delete' : 'Delete') + '</button></span>' : '') +
+        '</div>' +
+        (open ? '<div class="comments">' + commentsHTML(r, open) + '</div>' : '') +
+      '</li>';
+    }).join('') + '</ol>';
+  }
+  const sc = $('#board-bd').scrollTop;
+  $('#board-bd').innerHTML = h;
+  $('#board-bd').scrollTop = sc;
+}
+
+function commentsHTML(row, state) {
+  if (state === 'loading') return '<p class="empty" style="padding:8px 0">Loading comments</p>';
+  const meId = S.profile && S.profile.id;
+  const list = (state.list || []).map(c => {
+    const canDelete = c.user_id === meId || isCoach() || row.user_id === meId;
+    const canEdit = c.user_id === meId || isCoach();
+    if (state.editing === c.id) {
+      return '<form class="cmt-form cmt-edit" data-cid="' + esc(c.id) + '" data-sid="' + esc(row.score_id) + '"><label class="sr-only" for="ce-' + esc(c.id) + '">Edit comment</label>' +
+        '<input class="input" id="ce-' + esc(c.id) + '" name="body" maxlength="1000" value="' + esc(c.body) + '" autocomplete="off">' +
+        '<button class="btn-primary btn-sm" type="submit">Save</button><button class="text-btn text-btn--quiet" type="button" data-bact="canceledit">Cancel</button></form>';
+    }
+    return '<div class="cmt"><div><b>' + esc(c.author ? c.author.display_name : 'Athlete') + '</b>' + esc(c.body) +
+      '<time datetime="' + esc(c.created_at) + '">' + ago(c.created_at) + (c.edited_at ? ' · edited' : '') + '</time></div>' +
+      '<span class="cmt-acts">' +
+        (canEdit ? '<button class="text-btn text-btn--quiet" data-bact="editcomment" data-cid="' + esc(c.id) + '">Edit</button>' : '') +
+        (canDelete ? '<button class="text-btn text-btn--quiet" data-bact="delcomment" data-cid="' + esc(c.id) + '" aria-label="Delete comment">Delete</button>' : '') +
+      '</span></div>';
+  }).join('');
+  return list + '<form class="cmt-form" data-sid="' + esc(row.score_id) + '"><label class="sr-only" for="ci-' + esc(row.score_id) + '">Add a comment</label>' +
+    '<input class="input" id="ci-' + esc(row.score_id) + '" name="body" maxlength="1000" placeholder="Add a comment" autocomplete="off"><button class="btn-primary btn-sm" type="submit">Post</button></form>' +
+    (state.error ? '<p class="err">' + esc(state.error) + '</p>' : '');
+}
+
+async function onBoardClick(e) {
+  const t = e.target.closest('[data-bact]'); if (!t || !S.board) return;
+  const b = S.board, li = t.closest('.row'), id = li && li.dataset.id;
+  const row = id && b.rows.find(r => r.score_id === id);
+  switch (t.dataset.bact) {
+    case 'level': b.level = t.dataset.v; return loadBoard();
+    case 'division': b.division = t.dataset.v; return loadBoard();
+    case 'add': return openCoachAdd(b.sec);
+    case 'edit': return openCoachEditor(b.sec, { id: row.user_id, display_name: row.display_name }, row.score_id);
+    case 'delete': {
+      if (b.confirm !== id) {
+        b.confirm = id; renderBoard();
+        setTimeout(() => { if (S.board === b && b.confirm === id) { b.confirm = null; renderBoard(); } }, 4000);
+        return;
+      }
+      b.confirm = null;
+      const r = await S.api.deleteScoreById(id);
+      if (r.error) { renderBoard(); return toast(r.error.message, 'error'); }
+      toast('Result deleted');
+      return afterCoachChange(row.user_id, b.sec.key, null);
+    }
+    case 'like': {
+      const was = row.liked_by_me;
+      row.liked_by_me = !was; row.like_count = (row.like_count || 0) + (was ? -1 : 1); renderBoard();
+      const r = await (was ? S.api.unlike(id) : S.api.like(id));
+      if (r.error) { row.liked_by_me = was; row.like_count += was ? 1 : -1; renderBoard(); toast('Couldn’t update that like'); }
+      return;
+    }
+    case 'comments': {
+      if (b.open[id]) { delete b.open[id]; return renderBoard(); }
+      b.open[id] = 'loading'; renderBoard();
+      const r = await S.api.getComments(id);
+      if (S.board !== b) return;
+      b.open[id] = { list: r.data || [], error: r.error ? r.error.message : null, editing: null };
+      renderBoard();
+      const inp = document.getElementById('ci-' + id); if (inp) inp.focus();
+      return;
+    }
+    case 'editcomment': {
+      b.open[id].editing = t.dataset.cid; renderBoard();
+      const inp = document.getElementById('ce-' + t.dataset.cid); if (inp) { inp.focus(); inp.select(); }
+      return;
+    }
+    case 'canceledit': b.open[id].editing = null; return renderBoard();
+    case 'delcomment': {
+      const r = await S.api.deleteComment(t.dataset.cid);
+      if (r.error) return toast(r.error.message || 'Couldn’t delete that comment', 'error');
+      const st = b.open[id]; st.list = st.list.filter(c => c.id !== t.dataset.cid);
+      row.comment_count = Math.max(0, (row.comment_count || 1) - 1);
+      return renderBoard();
+    }
+  }
+}
+
+async function onBoardSubmit(e) {
+  const form = e.target.closest('.cmt-form'); if (!form || !S.board) return;
+  e.preventDefault();
+  const b = S.board, id = form.dataset.sid, body = form.elements.body.value.trim();
+  if (!body) return;
+  form.querySelector('[type="submit"]').disabled = true;
+  const st = b.open[id], row = b.rows.find(x => x.score_id === id);
+
+  if (form.classList.contains('cmt-edit')) {
+    const r = await S.api.updateComment(form.dataset.cid, body);
+    if (S.board !== b) return;
+    if (r.error) { st.error = r.error.message; return renderBoard(); }
+    const c = st.list.find(x => x.id === form.dataset.cid);
+    if (c) { c.body = r.data.body; c.edited_at = r.data.edited_at || new Date().toISOString(); }
+    st.error = null; st.editing = null;
+    return renderBoard();
+  }
+
+  const r = await S.api.addComment(id, body);
+  if (S.board !== b) return;
+  if (r.error) { st.error = r.error.message; form.querySelector('[type="submit"]').disabled = false; return renderBoard(); }
+  st.error = null;
+  st.list.push(Object.assign({}, r.data, { author: { display_name: S.profile ? S.profile.display_name : 'You' } }));
+  row.comment_count = (row.comment_count || 0) + 1;
+  renderBoard();
+  const inp = document.getElementById('ci-' + id); if (inp) inp.focus();
+}
+
+/* ── Auth ────────────────────────────────────────────── */
+function openAuth(mode, pendingKey) {
+  if (pendingKey) S.pendingKey = pendingKey;
+  renderAuth(mode);
+  const dlg = $('#dlg-auth'); if (!dlg.open) dlg.showModal();
+  const first = $('#auth-bd input'); if (first) first.focus();
+}
+
+function renderAuth(mode, msg) {
+  const titles = { signin: 'Sign in', signup: 'Create your account', reset: 'Reset your password', newpass: 'Choose a new password', sent: 'Check your email' };
+  $('#auth-title').textContent = titles[mode];
+  const pw = (id, label, ac) => '<label class="field"><span>' + label + '</span><div class="pw-wrap"><input class="input" id="' + id + '" type="password" autocomplete="' + ac + '" minlength="8" required>' +
+    '<button type="button" class="text-btn text-btn--quiet" data-pw="' + id + '">Show</button></div></label>';
+  const email = '<label class="field"><span>Email</span><input class="input" id="a-email" type="email" autocomplete="email" required></label>';
+  let h = '';
+  if (mode === 'sent') {
+    h = '<div class="msg-ok">' + msg + '</div><div class="auth-switch"><button class="text-btn" data-mode="signin">Back to sign in</button></div>';
+  } else {
+    h = '<form id="auth-form" novalidate>';
+    if (mode === 'signup') h += '<p style="font-size:14.5px;line-height:1.6;color:var(--ink-2)">Log your scores, see leaderboards, and comment on everyone’s results. It’s free.</p>' +
+      '<label class="field"><span>Name shown on leaderboards</span><input class="input" id="a-name" autocomplete="name" maxlength="60" required></label>';
+    if (mode !== 'newpass') h += email;
+    if (mode === 'signin') h += pw('a-pw', 'Password', 'current-password');
+    if (mode === 'signup') h += pw('a-pw', 'Password (8+ characters)', 'new-password');
+    if (mode === 'newpass') h += pw('a-pw', 'New password (8+ characters)', 'new-password');
+    const cta = { signin: 'Sign in', signup: 'Create account', reset: 'Send reset link', newpass: 'Save new password' }[mode];
+    h += '<div class="entry-acts"><button class="btn-primary" type="submit">' + cta + '</button></div><p class="err" id="auth-err" role="alert"></p></form>';
+    if (mode === 'signin') h += '<div class="auth-switch">New here? <button class="text-btn" data-mode="signup">Create account</button><br><button class="text-btn text-btn--quiet" data-mode="reset">Forgot your password?</button></div>';
+    if (mode === 'signup') h += '<div class="auth-switch">Already have an account? <button class="text-btn" data-mode="signin">Sign in</button></div>';
+    if (mode === 'reset') h += '<div class="auth-switch"><button class="text-btn" data-mode="signin">Back to sign in</button></div>';
+  }
+  $('#auth-bd').innerHTML = h;
+  $('#auth-bd').querySelectorAll('[data-mode]').forEach(b => { b.onclick = () => { renderAuth(b.dataset.mode); const f = $('#auth-bd input'); if (f) f.focus(); }; });
+  $('#auth-bd').querySelectorAll('[data-pw]').forEach(b => { b.onclick = () => { const i = document.getElementById(b.dataset.pw); const show = i.type === 'password'; i.type = show ? 'text' : 'password'; b.textContent = show ? 'Hide' : 'Show'; }; });
+  const form = $('#auth-form');
+  if (form) form.onsubmit = e => { e.preventDefault(); submitAuth(mode, form); };
+}
+
+async function submitAuth(mode, form) {
+  const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  const err = m => { $('#auth-err').textContent = m; };
+  const email = val('a-email'), pw = document.getElementById('a-pw') ? document.getElementById('a-pw').value : '';
+  if (mode !== 'newpass' && !/^\S+@\S+\.\S+$/.test(email)) return err('Enter a valid email address.');
+  if (mode === 'signup' && !val('a-name')) return err('Enter the name you want on leaderboards.');
+  if ((mode === 'signup' || mode === 'newpass') && pw.length < 8) return err('Use at least 8 characters for your password.');
+  if (mode === 'signin' && !pw) return err('Enter your password.');
+  const btn = form.querySelector('[type="submit"]'); btn.disabled = true;
+  const here = location.origin + location.pathname;
+  let r;
+  if (mode === 'signin') r = await S.api.signIn(email, pw);
+  if (mode === 'signup') r = await S.api.signUp(email, pw, val('a-name'), here);
+  if (mode === 'reset') r = await S.api.sendPasswordReset(email, here);
+  if (mode === 'newpass') r = await S.api.setNewPassword(pw);
+  btn.disabled = false;
+  if (r.error) return err(friendlyAuthError(r.error));
+
+  if (mode === 'reset') return renderAuth('sent', 'If an account exists for <b>' + esc(email) + '</b>, a reset link is on its way. Open it on this device to choose a new password.');
+  if (mode === 'signup' && S.db && !(r.data && r.data.session)) return renderAuth('sent', 'We sent a confirmation link to <b>' + esc(email) + '</b>. Open it on this device to finish creating your account.');
+  $('#dlg-auth').close();
+  toast(mode === 'newpass' ? 'Password updated' : mode === 'signup' ? 'Welcome aboard' : 'Signed in');
+  if (S.pendingKey) { S.editing['me:' + S.pendingKey] = true; }
+}
+
+function friendlyAuthError(e) {
+  const m = String(e.message || '');
+  if (/invalid login/i.test(m)) return 'That email and password don’t match. Check both, or reset your password.';
+  if (/not confirmed/i.test(m)) return 'Confirm your email first. Open the link we sent, then sign in.';
+  if (/already registered/i.test(m)) return 'An account with this email already exists. Sign in instead.';
+  if (/rate limit/i.test(m)) return 'Too many attempts. Wait a few minutes and try again.';
+  return m || 'Something went wrong. Try again.';
+}
+
+/* ── Account + coach tools ───────────────────────────── */
+async function openProfile() {
+  await refreshProfile();
+  renderProfile();
+  $('#dlg-profile').showModal();
+  if (isCoach()) { loadWarnings(); loadPeople(); }
+}
+
+function renderProfile() {
+  const p = S.profile || {};
+  $('#profile-title').innerHTML = 'Your account' + (p.role === 'coach' ? '<span class="tag role-tag">Coach</span>' : '');
+  const divs = [''].concat(CONFIG.DIVISIONS);
+  let h = '<form id="pf-form">' +
+    '<label class="field"><span>Name shown on leaderboards</span><input class="input" id="pf-name" maxlength="60" value="' + esc(p.display_name) + '"></label>' +
+    '<div class="two">' +
+      '<label class="field"><span>Leaderboard group</span><select class="input" id="pf-div">' + divs.map(d => '<option value="' + esc(d) + '"' + ((p.division || '') === d ? ' selected' : '') + '>' + (d ? esc(d) : 'None') + '</option>').join('') + '</select></label>' +
+      '<label class="field"><span>Weights in</span><select class="input" id="pf-unit"><option value="lb"' + (p.unit_pref !== 'kg' ? ' selected' : '') + '>Pounds (lb)</option><option value="kg"' + (p.unit_pref === 'kg' ? ' selected' : '') + '>Kilograms (kg)</option></select></label>' +
+    '</div>' +
+    '<div class="entry-acts"><button class="btn-primary btn-sm" type="submit">Save changes</button><button class="btn-ghost btn-ghost--magenta btn-sm" type="button" id="pf-out">Sign out</button></div>' +
+    '<p class="err" id="pf-err" role="alert"></p></form>';
+
+  if (isCoach()) {
+    h += '<section class="sheet-section"><h3>People</h3><p>Rename people, set their leaderboard group, and choose who’s a coach. Coaches see everything, can add, edit, and delete results and comments, and manage this list.</p>' +
+      '<label class="field"><span>Search</span><input class="input" id="pp-search" placeholder="Name or email" autocomplete="off"></label>' +
+      '<ul class="people" id="people-list"><li class="empty">Loading</li></ul></section>';
+  }
+  if (isCoach()) {
+    const t = todayISO(), first = t.slice(0, 8) + '01';
+    const ranked = Object.keys(TD.TYPES).filter(k => TD.TYPES[k].ranked || k === 'check');
+    const pda = S.settings.public_days_ahead;
+    const opts = [[null, 'Everything'], [0, 'Today'], [1, '+1 day'], [7, '+7 days']];
+    h += '<section class="sheet-section"><h3>Export scores</h3><p>One row per set, with pounds and kilograms side by side.</p>' +
+      '<div class="two"><label class="field"><span>From</span><input class="input" type="date" id="ex-from" value="' + first + '"></label>' +
+      '<label class="field"><span>To</span><input class="input" type="date" id="ex-to" value="' + t + '"></label></div>' +
+      '<div class="two"><label class="field"><span>Score type</span><select class="input" id="ex-type"><option value="">All types</option>' + ranked.map(k => '<option value="' + k + '">' + esc(TD.TYPES[k].label) + '</option>').join('') + '</select></label>' +
+      '<label class="field"><span>Workout name contains</span><input class="input" id="ex-title" placeholder="e.g. squat"></label></div>' +
+      '<div class="entry-acts"><button class="btn-primary btn-sm" data-export="xlsx" type="button">Download Excel</button><button class="btn-ghost btn-sm" data-export="csv" type="button">Download CSV</button></div>' +
+      '<p class="err" id="ex-err" role="alert"></p></section>' +
+      '<section class="sheet-section"><h3>What visitors can see</h3><p>How far ahead people without an account can see programming. Members always see everything that’s published.</p>' +
+      '<div class="seg seg--sm" role="group" aria-label="Visitor look-ahead" style="margin-top:12px;flex-wrap:wrap">' +
+      opts.map(([v, l]) => '<button type="button" data-pda="' + (v === null ? 'null' : v) + '" aria-pressed="' + (pda === v || (v === null && (pda === null || pda === undefined))) + '">' + l + '</button>').join('') + '</div></section>' +
+      '<section class="sheet-section"><h3>Coach’s notes</h3><p>Lines starting with * in the sheet. Choose who can open them.</p>' +
+      '<div class="seg seg--sm" role="group" aria-label="Who can see coach’s notes" style="margin-top:12px">' +
+      [['everyone', 'Everyone'], ['coaches', 'Coaches only']].map(([v, l]) => '<button type="button" data-cnv="' + v + '" aria-pressed="' + ((S.settings.coach_notes_visibility || 'everyone') === v) + '">' + l + '</button>').join('') + '</div></section>' +
+      '<section class="sheet-section"><h3>Sheet warnings</h3><p>Scoring tags the app couldn’t read, from 45 days back to 90 days ahead. Fix them in the sheet and they clear on the next publish.</p><ul class="warn-list" id="warn-list"><li>Loading</li></ul></section>';
+  }
+  $('#profile-bd').innerHTML = h;
+
+  $('#pf-form').onsubmit = async e => {
+    e.preventDefault();
+    const name = $('#pf-name').value.trim();
+    if (!name) { $('#pf-err').textContent = 'Enter a name.'; return; }
+    const r = await S.api.updateProfile({ display_name: name, division: $('#pf-div').value || null, unit_pref: $('#pf-unit').value });
+    if (r.error) { $('#pf-err').textContent = r.error.message; return; }
+    S.profile = r.data; renderNav(); $('#dlg-profile').close(); toast('Changes saved');
+  };
+  $('#pf-out').onclick = async () => { $('#dlg-profile').close(); await S.api.signOut(); toast('Signed out'); }; // the auth listener reloads the day
+  $('#profile-bd').querySelectorAll('[data-export]').forEach(b => { b.onclick = () => runExport(b.dataset.export, b); });
+  $('#profile-bd').querySelectorAll('[data-cnv]').forEach(b => {
+    b.onclick = async () => {
+      const r = await S.api.updateSettings({ coach_notes_visibility: b.dataset.cnv });
+      if (r.error || !r.data) return toast('Couldn’t change that setting', 'error');
+      S.settings = r.data;
+      b.parentElement.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+      toast(b.dataset.cnv === 'coaches' ? 'Coach’s notes: coaches only' : 'Coach’s notes: everyone');
+      loadDay(S.day, true);
+    };
+  });
+  $('#profile-bd').querySelectorAll('[data-pda]').forEach(b => {
+    b.onclick = async () => {
+      const v = b.dataset.pda === 'null' ? null : Number(b.dataset.pda);
+      const r = await S.api.updateSettings({ public_days_ahead: v });
+      if (r.error || !r.data) return toast('Couldn’t change that setting');
+      S.settings = r.data;
+      b.parentElement.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+      toast('Visitor view updated');
+    };
+  });
+}
+
+/* ── People (coaches) ────────────────────────────────── */
+const ROLE_LABELS = { athlete: 'Athlete', coach: 'Coach' };
+
+async function loadPeople() {
+  const ul = document.getElementById('people-list'); if (!ul) return;
+  const r = await S.api.listPeople();
+  if (r.error) { ul.innerHTML = '<li class="empty">' + esc(r.error.message) + '</li>'; return; }
+  S.people = r.data || [];
+  renderPeople();
+}
+
+function renderPeople() {
+  const ul = document.getElementById('people-list'); if (!ul || !S.people) return;
+  const input = document.getElementById('pp-search');
+  const q = input ? input.value.trim().toLowerCase() : '';
+  const list = S.people.filter(p => !q || (p.display_name || '').toLowerCase().includes(q) || (p.email || '').toLowerCase().includes(q));
+  ul.innerHTML = list.length ? list.map(personHTML).join('') : '<li class="empty">No one matches “' + esc(q) + '”.</li>';
+}
+
+function personHTML(p) {
+  const me = S.profile && p.id === S.profile.id, id = esc(p.id);
+  const main = S.renaming === p.id
+    ? '<form class="rename" data-pid="' + id + '"><label class="sr-only" for="rn-' + id + '">New name</label><input class="input" id="rn-' + id + '" name="name" maxlength="60" value="' + esc(p.display_name) + '">' +
+      '<button class="btn-primary btn-sm" type="submit">Save</button><button class="text-btn text-btn--quiet" type="button" data-pact="cancel-rename">Cancel</button></form>'
+    : '<b>' + esc(p.display_name) + (me ? ' (you)' : '') + '</b><small>' + esc(p.email || 'No email on file') + ' · ' + p.score_count + (Number(p.score_count) === 1 ? ' result' : ' results') + '</small>';
+  return '<li class="person" data-pid="' + id + '"><div class="person-main">' + main + '</div><div class="person-ctrls">' +
+    '<label class="sr-only" for="role-' + id + '">Role for ' + esc(p.display_name) + '</label>' +
+    '<select class="input input--sm" id="role-' + id + '" data-pf="role">' + Object.keys(ROLE_LABELS).map(v => '<option value="' + v + '"' + (p.role === v ? ' selected' : '') + '>' + ROLE_LABELS[v] + '</option>').join('') + '</select>' +
+    '<label class="sr-only" for="div-' + id + '">Leaderboard group for ' + esc(p.display_name) + '</label>' +
+    '<select class="input input--sm" id="div-' + id + '" data-pf="division">' + [''].concat(CONFIG.DIVISIONS).map(v => '<option value="' + esc(v) + '"' + ((p.division || '') === v ? ' selected' : '') + '>' + (v ? esc(v) : 'No group') + '</option>').join('') + '</select>' +
+    (S.renaming === p.id ? '' : '<button class="text-btn" type="button" data-pact="rename">Rename</button>') +
+    '</div></li>';
+}
+
+async function onPeopleChange(e) {
+  const sel = e.target.closest('select[data-pf]'); if (!sel) return;
+  const li = sel.closest('.person'), p = S.people.find(x => x.id === li.dataset.pid); if (!p) return;
+  sel.disabled = true;
+  if (sel.dataset.pf === 'role') {
+    const r = await S.api.setRole(p.id, sel.value);
+    sel.disabled = false;
+    if (r.error) { sel.value = p.role; return toast(r.error.message, 'error'); }
+    p.role = r.data.role;
+    toast(p.display_name + ' is now ' + (p.role === 'coach' ? 'a coach' : 'an athlete'));
+    if (S.profile && p.id === S.profile.id) {           // you changed your own role
+      await refreshProfile(); renderNav(); renderProfile(); if (isCoach()) { loadWarnings(); loadPeople(); }
+      if (S.board) renderBoard();
+      loadDay(S.day, true);
+    }
+  } else {
+    const r = await S.api.updatePerson(p.id, { division: sel.value || null });
+    sel.disabled = false;
+    if (r.error) { sel.value = p.division || ''; return toast(r.error.message, 'error'); }
+    p.division = r.data.division; toast('Group updated');
+  }
+}
+
+function onPeopleClick(e) {
+  const t = e.target.closest('[data-pact]'); if (!t) return;
+  const li = t.closest('.person');
+  if (t.dataset.pact === 'rename') { S.renaming = li.dataset.pid; renderPeople(); const i = document.getElementById('rn-' + li.dataset.pid); if (i) { i.focus(); i.select(); } }
+  if (t.dataset.pact === 'cancel-rename') { S.renaming = null; renderPeople(); }
+}
+
+async function onPeopleSubmit(e) {
+  const form = e.target.closest('form.rename'); if (!form) return;
+  e.preventDefault();
+  const pid = form.dataset.pid, name = form.elements.name.value.trim();
+  if (!name) return toast('Enter a name');
+  const r = await S.api.updatePerson(pid, { display_name: name });
+  if (r.error) return toast(r.error.message, 'error');
+  const p = S.people.find(x => x.id === pid); if (p) p.display_name = r.data.display_name;
+  S.renaming = null; renderPeople(); toast('Name updated');
+  if (S.profile && pid === S.profile.id) { S.profile.display_name = r.data.display_name; renderNav(); const f = document.getElementById('pf-name'); if (f) f.value = r.data.display_name; }
+}
+
+async function loadWarnings() {
+  const t = todayISO();
+  const r = await S.api.getWarnings(addDays(t, -45), addDays(t, 90));
+  const ul = document.getElementById('warn-list'); if (!ul) return;
+  if (r.error) { ul.innerHTML = '<li>' + esc(r.error.message) + '</li>'; return; }
+  const items = [];
+  (r.data || []).forEach(d => {
+    const groups = {};
+    (d.warnings || []).forEach(w => {
+      const m = String(w).match(/^([A-Z]{1,3}): (.*)$/);
+      const g = m ? 'Section ' + m[1] : 'Day';
+      (groups[g] = groups[g] || []).push(m ? m[2] : w);
+    });
+    Object.keys(groups).forEach(g => items.push('<li><b>' + esc(fmt(d.day, { weekday: 'short', month: 'short', day: 'numeric' })) + '</b>' +
+      esc(g) + ': ' + esc(groups[g].join('; ')) + '</li>'));
+  });
+  ul.innerHTML = items.length ? items.join('') : '<li>No warnings. Every scoring tag in that range reads cleanly.</li>';
+}
+
+async function runExport(kind, btn) {
+  const err = $('#ex-err'); err.textContent = '';
+  const from = $('#ex-from').value, to = $('#ex-to').value;
+  if (!from || !to || from > to) { err.textContent = 'Pick a start date on or before the end date.'; return; }
+  btn.disabled = true;
+  const r = await S.api.exportRows(from, to, { scoreType: $('#ex-type').value || undefined, titleContains: $('#ex-title').value.trim() || undefined });
+  if (r.error) { btn.disabled = false; err.textContent = r.error.message; return; }
+  if (!r.data.length) { btn.disabled = false; err.textContent = 'No scores match those filters.'; return; }
+  const name = 'scores-' + from + '-to-' + to;
+  try {
+    if (kind === 'xlsx') {
+      if (!window.XLSX) await loadScript(CONFIG.XLSX_URL);
+      downloadXlsx(window.XLSX, r.data, name + '.xlsx');
+    } else downloadCsv(r.data, name + '.csv');
+    toast('Exported ' + r.data.length + ' rows');
+  } catch (e) {
+    downloadCsv(r.data, name + '.csv');
+    toast('Excel unavailable, downloaded CSV');
+  }
+  btn.disabled = false;
+}
+
+boot().catch(e => {
+  console.error(e);
+  $('#day-body').innerHTML = '<div class="plain-card"><h2 class="plain-title">The app didn’t start</h2><p>' + esc(e.message) + '</p></div>';
+});
+</script>
+</body>
+</html>
