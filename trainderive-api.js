@@ -200,6 +200,18 @@
 
       // ── Export: coaches get everyone. Athletes get what they can see (own + public boards);
       //    pass { userId: api-user-id } to export only your own. ──
+      /** Every result logged on one day, for a spreadsheet: one row per athlete per workout, workouts in program order, athletes A–Z.
+       *  Row: { day, section_key, workout, athlete, gender, result, level }. Coaches get everyone; others only what they can see. */
+      exportDay: member(async function (day) {
+        const [lb, sets, secs] = await Promise.all([
+          wrap(db.from('leaderboard').select('score_id, day, section_key, section_title, score_type, level, display_name, division, display').eq('day', day)),
+          wrap(db.from('scores').select('id, sets').eq('day', day)),
+          wrap(db.from('program_sections').select('key, position, title').eq('day', day)),
+        ]);
+        if (lb.error) return lb;
+        return { data: dayResultRows(lb.data || [], sets.data || [], secs.data || []), error: null };
+      }),
+
       exportRows: member(async function (from, to, filter) {
         filter = filter || {};
         const rows = [];
@@ -222,6 +234,71 @@
   const EXPORT_COLUMNS = ['day', 'athlete', 'division', 'section_key', 'section_title', 'score_type', 'level',
     'score', 'score_value', 'is_capped', 'set_number', 'set_value', 'set_unit', 'set_lb', 'set_kg',
     'set_seconds', 'set_rounds', 'set_reps', 'set_missed', 'set_text', 'notes', 'updated_at'];
+
+  // ── Day export ────────────────────────────────────────
+  const DAY_EXPORT_COLUMNS = ['Date', 'Workout', 'Athlete', 'Gender', 'Result', 'RX/Scaled'];
+  const UNRANKED = { check: 1, emoji: 1, text: 1, none: 1 };
+
+  function resultText(type, display, sets) {
+    const first = (sets || [])[0] || {};
+    if (type === 'text') return first.text != null ? String(first.text) : (display || '');   // full text, not the shortened board version
+    if (type === 'check') return 'Done';
+    if (type === 'emoji') return first.rating ? first.rating + '/5' : (display || '');
+    return display || '';
+  }
+
+  /** leaderboard rows + { id, sets } + program sections → export rows (pure; shared by the API and tests) */
+  function dayResultRows(lbRows, scoreSets, sections) {
+    const setsById = {}; (scoreSets || []).forEach(x => { setsById[x.id] = x.sets; });
+    const secByKey = {}; (sections || []).forEach(x => { secByKey[x.key] = x; });
+    return (lbRows || []).map(r => {
+      const sec = secByKey[r.section_key];
+      return {
+        _pos: sec ? sec.position : 1e6,
+        day: r.day, section_key: r.section_key,
+        workout: r.section_key + ': ' + ((sec && sec.title) || r.section_title || ''),
+        athlete: r.display_name || '', gender: r.division || '',
+        result: resultText(r.score_type, r.display, setsById[r.score_id]),
+        level: UNRANKED[r.score_type] ? '' : (r.level === 'scaled' ? 'Scaled' : 'RX'),
+      };
+    }).sort((a, b) => a._pos - b._pos || String(a.section_key).localeCompare(String(b.section_key)) || a.athlete.localeCompare(b.athlete, undefined, { sensitivity: 'base' }))
+      .map(r => { delete r._pos; return r; });
+  }
+
+  function dayResultsToCsv(rows) {
+    const esc = v => { v = cellSafe(v); if (v === null || v === undefined) return ''; v = String(v); return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    const lines = [DAY_EXPORT_COLUMNS].concat(rows.map(r => [r.day, r.workout, r.athlete, r.gender, r.result, r.level]));
+    return '\ufeff' + lines.map(a => a.map(esc).join(',')).join('\r\n');   // BOM so Excel reads names like José correctly
+  }
+
+  /** "All results" tab plus one tab per workout. Every cell is stored as text, so a time like 26:00 is never turned into a clock time. */
+  function dayResultsToWorkbook(XLSX, rows) {
+    const toSheet = list => {
+      const ws = XLSX.utils.aoa_to_sheet([DAY_EXPORT_COLUMNS].concat(list.map(r => [r.day, r.workout, r.athlete, r.gender, r.result, r.level])));
+      Object.keys(ws).forEach(k => { if (k[0] !== '!') { ws[k].t = 's'; ws[k].v = String(ws[k].v == null ? '' : ws[k].v); ws[k].z = '@'; } });
+      ws['!cols'] = [{ wch: 11 }, { wch: 28 }, { wch: 24 }, { wch: 8 }, { wch: 32 }, { wch: 10 }];
+      return ws;
+    };
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, toSheet(rows), 'All results');
+    const order = [], groups = {};
+    rows.forEach(r => { if (!groups[r.workout]) { groups[r.workout] = []; order.push(r.workout); } groups[r.workout].push(r); });
+    const used = { 'all results': 1 };
+    order.forEach(w => {
+      let name = w.replace(/[\[\]:*?\/\\]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 31) || 'Workout';
+      for (let n = 2; used[name.toLowerCase()]; n++) name = name.slice(0, 31 - String(n).length - 1) + ' ' + n;
+      used[name.toLowerCase()] = 1;
+      XLSX.utils.book_append_sheet(wb, toSheet(groups[w]), name);
+    });
+    return wb;
+  }
+
+  function saveBlob(blob, filename) {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  function downloadDayCsv(rows, filename) { saveBlob(new Blob([dayResultsToCsv(rows)], { type: 'text/csv;charset=utf-8' }), filename || 'results.csv'); }
+  function downloadDayXlsx(XLSX, rows, filename) { XLSX.writeFile(dayResultsToWorkbook(XLSX, rows), filename || 'results.xlsx'); }
 
   // Neutralize spreadsheet formulas in athlete-typed text
   const cellSafe = v => (typeof v === 'string' && /^[=+\-@]/.test(v) ? "'" + v : v);
@@ -250,7 +327,8 @@
   }
   function downloadXlsx(XLSX, rows, filename) { XLSX.writeFile(rowsToWorkbook(XLSX, rows), filename || 'scores.xlsx'); }
 
-  const exported = { TrainDeriveApi, AUTH_REQUIRED, rowsToCsv, rowsToWorkbook, downloadCsv, downloadXlsx, EXPORT_COLUMNS };
+  const exported = { TrainDeriveApi, AUTH_REQUIRED, rowsToCsv, rowsToWorkbook, downloadCsv, downloadXlsx, EXPORT_COLUMNS,
+    DAY_EXPORT_COLUMNS, dayResultRows, dayResultsToCsv, dayResultsToWorkbook, downloadDayCsv, downloadDayXlsx };
   if (typeof module !== 'undefined' && module.exports) module.exports = exported;
   Object.assign(root, exported);
 })(typeof globalThis !== 'undefined' ? globalThis : this);
