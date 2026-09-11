@@ -264,25 +264,33 @@ button { cursor: pointer; background: none; border: 0; }
 .cells { display: flex; gap: 8px; align-items: stretch; max-width: 460px; }
 .cell {
   flex: 1 1 0; min-width: 0; background: var(--paper); border: 1px solid var(--line); border-top: 4px solid var(--accent);
-  border-radius: 4px; padding: 8px 6px 6px; display: flex; flex-direction: column; align-items: center;
+  border-radius: 4px; padding: 5px 6px 3px; display: flex; flex-direction: column; align-items: center;
 }
 .cell:focus-within { border-color: var(--accent); box-shadow: 0 6px 20px rgba(20,22,28,0.08); }
 .cell label { font-size: 9px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-3); }
 .cell input {
   width: 100%; border: 0; background: transparent; outline: none; text-align: center;
-  font-family: var(--display); font-size: clamp(48px, 14vw, 64px); line-height: 1; color: var(--ink);
+  font-family: var(--display); font-size: clamp(30px, 9vw, 36px); line-height: 1; color: var(--ink);
   font-variant-numeric: tabular-nums; padding: 4px 0 0; -moz-appearance: textfield;
 }
 .cell input::placeholder { color: #C9D0DC; }
-.colon { font-family: var(--display); font-size: 48px; color: var(--ink-3); align-self: center; padding-top: 14px; }
-.sets-grid { max-width: 580px; display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
-.sets-grid .cell input { font-size: 38px; }
-.miss { margin-top: 4px; font-size: 9px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-3); padding: 5px 8px; border-radius: 3px; }
+.colon { font-family: var(--display); font-size: 28px; color: var(--ink-3); align-self: center; padding-top: 10px; }
+.sets-grid { max-width: 580px; display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 6px; }
+.sets-grid .cell { padding: 4px 4px 3px; border-top-width: 3px; }
+.sets-grid .cell input { font-size: 26px; padding: 1px 0 0; }
+.sets-grid .cell-sub { margin-top: 1px; }
+.miss { margin-top: 1px; font-size: 8px; line-height: 1.2; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-3); padding: 2px 6px; border-radius: 3px; }
 .miss[aria-pressed="true"] { color: #fff; background: var(--magenta); }
-.set-row { display: grid; grid-template-columns: 54px 1fr auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
-.set-row .set-n { font-family: var(--display); font-size: 18px; letter-spacing: 1px; color: var(--ink-3); }
-.set-row .cell input { font-size: 34px; }
-.set-row .colon { font-size: 30px; padding-top: 10px; }
+.cell label.sr-only, .cell label .sr-only { text-transform: none; letter-spacing: 0; }
+.set-head, .set-row { display: grid; grid-template-columns: 46px 1fr auto 1fr; gap: 6px; align-items: center; }
+.set-head { margin-bottom: 4px; }
+.set-head span { font-size: 9px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-3); text-align: center; }
+.set-head .colon { visibility: hidden; font-size: 20px; padding: 0; }
+.set-row { margin-bottom: 6px; }
+.set-row .set-n { font-family: var(--display); font-size: 16px; letter-spacing: 1px; color: var(--ink-3); }
+.set-row .cell { padding: 0 4px; border-top-width: 3px; }
+.set-row .cell input { font-size: 26px; padding: 7px 0 5px; }
+.set-row .colon { font-size: 20px; padding-top: 0; }
 .unit-lab { font-family: var(--display); font-size: 22px; letter-spacing: 1px; color: var(--ink-3); align-self: center; }
 
 .cap-toggle { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 14px; color: var(--ink-2); cursor: pointer; user-select: none; }
@@ -451,7 +459,7 @@ dialog.sheet::backdrop { background: rgba(20,22,28,0.5); backdrop-filter: blur(2
   .me-name { display: none; }
   .me-btn { padding: 3px; }
   .seg button { padding: 10px 14px; }
-  .set-row { grid-template-columns: 40px 1fr auto 1fr; }
+  .set-head, .set-row { grid-template-columns: 40px 1fr auto 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
@@ -1011,8 +1019,9 @@ function readDraft(slot) {
 }
 
 // "4 reps @ 75%" for set i when the tag has a rep or percentage scheme
-function setTarget(spec, i) {
+function setTarget(spec, i, short) {
   const r = spec.reps && spec.reps[i], p = spec.pcts && spec.pcts[i];
+  if (short && r && p) return r + ' @ ' + p + '%';           // compact boxes: coaching shorthand "4 @ 75%"
   return [r ? r + (r === 1 ? ' rep' : ' reps') : '', p ? '@ ' + p + '%' : ''].filter(Boolean).join(' ');
 }
 
@@ -1028,7 +1037,9 @@ function setText(s, type) {
 function cell(label, f, i, val, opts) {
   opts = opts || {};
   const id = 'in-' + f + '-' + i + '-' + Math.random().toString(36).slice(2, 7);
-  return '<div class="cell"><label for="' + id + '">' + esc(label) + (opts.sub ? '<span class="cell-sub">' + esc(opts.sub) + '</span>' : '') + '</label><input id="' + id + '" data-f="' + f + '" data-i="' + i + '" value="' + esc(val) + '" inputmode="' + (opts.decimal ? 'decimal' : 'numeric') +
+  return '<div class="cell"><label for="' + id + '"' + (opts.sr ? ' class="sr-only"' : '') + '>' + esc(label) +
+    (opts.sub ? '<span class="cell-sub"' + (opts.subFull && opts.subFull !== opts.sub ? ' aria-hidden="true"' : '') + '>' + esc(opts.sub) + '</span>' : '') +
+    (opts.subFull && opts.subFull !== opts.sub ? '<span class="sr-only">, ' + esc(opts.subFull.replace('@', 'at')) + '</span>' : '') + '</label><input id="' + id + '" data-f="' + f + '" data-i="' + i + '" value="' + esc(val) + '" inputmode="' + (opts.decimal ? 'decimal' : 'numeric') +
     '" autocomplete="off" placeholder="' + (opts.ph || '0') + '" maxlength="' + (opts.max || 6) + '">' + (opts.after || '') + '</div>';
 }
 
@@ -1072,18 +1083,20 @@ function editorHTML(slot) {
     cells = '<div class="cells">' + (spec.capScore === 'rr' ? cell('Rounds', 'rounds', 0, d.raw[0].rounds) : '') + cell('Reps at the cap', 'reps', 0, d.raw[0].reps) + '</div>';
   } else if (spec.type === 'time') {
     cells = multi
-      ? d.raw.map((r, i) => '<div class="set-row"><span class="set-n">Set ' + (i + 1) + '</span>' + cell('Min', 'm', i, r.m, { max: 3 }) + '<span class="colon">:</span>' + cell('Sec', 's', i, r.s, { max: 5, ph: '00', decimal: true }) + '</div>').join('')
+      ? '<div class="set-head" aria-hidden="true"><span></span><span>Min</span><span class="colon">:</span><span>Sec</span></div>' +
+        d.raw.map((r, i) => '<div class="set-row"><span class="set-n">Set ' + (i + 1) + '</span>' + cell('Set ' + (i + 1) + ' minutes', 'm', i, r.m, { max: 3, sr: true }) + '<span class="colon">:</span>' + cell('Set ' + (i + 1) + ' seconds', 's', i, r.s, { max: 5, ph: '00', decimal: true, sr: true }) + '</div>').join('')
       : '<div class="cells">' + cell('Minutes', 'm', 0, d.raw[0].m, { max: 3 }) + '<span class="colon" aria-hidden="true">:</span>' + cell('Seconds', 's', 0, d.raw[0].s, { max: 5, ph: '00', decimal: true }) + '</div>';
   } else if (spec.type === 'rr') {
     cells = multi
-      ? d.raw.map((r, i) => '<div class="set-row"><span class="set-n">Set ' + (i + 1) + '</span>' + cell('Rounds', 'rounds', i, r.rounds) + '<span class="colon">+</span>' + cell('Reps', 'reps', i, r.reps) + '</div>').join('')
+      ? '<div class="set-head" aria-hidden="true"><span></span><span>Rounds</span><span class="colon">+</span><span>Reps</span></div>' +
+        d.raw.map((r, i) => '<div class="set-row"><span class="set-n">Set ' + (i + 1) + '</span>' + cell('Set ' + (i + 1) + ' rounds', 'rounds', i, r.rounds, { sr: true }) + '<span class="colon">+</span>' + cell('Set ' + (i + 1) + ' reps', 'reps', i, r.reps, { sr: true }) + '</div>').join('')
       : '<div class="cells">' + cell('Rounds', 'rounds', 0, d.raw[0].rounds) + '<span class="colon" aria-hidden="true">+</span>' + cell('Reps', 'reps', 0, d.raw[0].reps) + '</div>';
   } else {
     const unit = spec.type === 'load' ? d.unit : T.unit;
     const decimal = T.input === 'decimal';
     if (multi) {
       cells = '<div class="sets-grid">' + d.raw.map((r, i) => cell('Set ' + (i + 1), 'value', i, r.value, {
-        decimal, max: 7, sub: setTarget(spec, i),
+        decimal, max: 7, sub: setTarget(spec, i, true), subFull: setTarget(spec, i),
         after: spec.type === 'load' ? '<button class="miss" data-act="miss" data-i="' + i + '" aria-pressed="' + !!r.missed + '" aria-label="Set ' + (i + 1) + ' missed">' + (r.missed ? 'Missed' : 'Miss?') + '</button>' : '',
       })).join('') + '</div>';
     } else {
