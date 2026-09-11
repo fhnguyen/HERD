@@ -139,6 +139,14 @@
 
       // ── Leaderboard ──────────────────────────────────────────────────
       /** Ranked rows for a section. level: 'rx' | 'scaled'. division filter re-ranks client-side. */
+      /** Individual sets for every result on a board you can see: { scoreId: [set, …] }. Same visibility rules as the leaderboard. */
+      getBoardSets: member(async function (day, sectionKey) {
+        const r = await wrap(db.from('scores').select('id, sets').eq('day', day).eq('section_key', sectionKey));
+        if (r.error) return r;
+        const out = {}; (r.data || []).forEach(x => { out[x.id] = x.sets || []; });
+        return { data: out, error: null };
+      }),
+
       getLeaderboard: member(async function (day, sectionKey, o) {
         o = o || {};
         let q = db.from('leaderboard').select('*').eq('day', day).eq('section_key', sectionKey);
