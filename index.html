@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>HERD | WESTWOOD</title>
 <meta name="theme-color" content="#FFFFFF">
+<!-- Home screen app -->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="HERD">
+<meta name="application-name" content="HERD">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap" rel="stylesheet">
 <style>
@@ -701,7 +710,7 @@ async function loadDay(iso, keepDrafts) {
 
   if (dayR.error) {
     S.loading = false; S.dayData = null; renderTitle();
-    $('#day-body').innerHTML = '<div class="plain-card"><h2 class="plain-title">Training didn’t load</h2><p>' + esc(dayR.error.message || 'Check your connection and try again.') +
+    $('#day-body').innerHTML = '<div class="plain-card"><h2 class="plain-title">' + (navigator.onLine === false ? 'You’re offline' : 'Training didn’t load') + '</h2><p>' + esc(navigator.onLine === false ? 'Reconnect to the internet, then try again.' : (dayR.error.message || 'Check your connection and try again.')) +
       '</p><div class="acts"><button class="btn-primary btn-sm" data-act="retry">Try again</button></div></div>';
     return;
   }
@@ -1450,8 +1459,9 @@ async function submitAuth(mode, form) {
   btn.disabled = false;
   if (r.error) return err(friendlyAuthError(r.error));
 
-  if (mode === 'reset') return renderAuth('sent', 'If an account exists for <b>' + esc(email) + '</b>, a reset link is on its way. Open it on this device to choose a new password.');
-  if (mode === 'signup' && S.db && !(r.data && r.data.session)) return renderAuth('sent', 'We sent a confirmation link to <b>' + esc(email) + '</b>. Open it on this device to finish creating your account.');
+  const backToApp = isStandalone() ? ' The link opens in your browser; when you’re done there, come back to this app and sign in.' : '';
+  if (mode === 'reset') return renderAuth('sent', 'If an account exists for <b>' + esc(email) + '</b>, a reset link is on its way. Open it on this device to choose a new password.' + backToApp);
+  if (mode === 'signup' && S.db && !(r.data && r.data.session)) return renderAuth('sent', 'We sent a confirmation link to <b>' + esc(email) + '</b>. Open it on this device to finish creating your account.' + backToApp);
   $('#dlg-auth').close();
   toast(mode === 'newpass' ? 'Password updated' : mode === 'signup' ? 'Welcome aboard' : 'Signed in');
   if (S.pendingKey) { S.editing['me:' + S.pendingKey] = true; }
@@ -1663,9 +1673,30 @@ async function runExport(kind, btn) {
   btn.disabled = false;
 }
 
+/* ── Home screen app ─────────────────────────────────── */
+const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+}
+
+// An installed app can sit in the background for hours: when it comes back, refresh the day,
+// and if the calendar date changed while it was away, jump to the new today.
+let lastShown = Date.now(), shownToday = todayISO();
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible' || !S.api) return;
+  const away = Date.now() - lastShown, today = todayISO();
+  lastShown = Date.now();
+  if (today !== shownToday) { const was = shownToday; shownToday = today; if (!location.hash || location.hash === '#' + was) { location.hash = ''; route(); return; } }
+  if (away > 60000 && !document.querySelector('dialog[open]')) loadDay(S.day, true);
+});
+
 boot().catch(e => {
   console.error(e);
-  $('#day-body').innerHTML = '<div class="plain-card"><h2 class="plain-title">The app didn’t start</h2><p>' + esc(e.message) + '</p></div>';
+  const offline = navigator.onLine === false;
+  $('#day-body').innerHTML = '<div class="plain-card"><h2 class="plain-title">' + (offline ? 'You’re offline' : 'The app didn’t start') + '</h2><p>' +
+    (offline ? 'Connect to the internet to load training and scores.' : esc(e.message)) +
+    '</p><div class="acts"><button class="btn-primary btn-sm" onclick="location.reload()">Try again</button></div></div>';
 });
 </script>
 </body>
