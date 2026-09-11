@@ -303,6 +303,13 @@
         return ok(Object.assign({}, p));
       }),
 
+      exportDay: member(day => {
+        const build = root.dayResultRows || (typeof require === 'function' ? require('./trainderive-api.js').dayResultRows : null);
+        const visible = scores.filter(s => s.day === day && canSee(s));
+        const lbRows = visible.map(s => { const pr = profiles[s.user_id] || {}; return { score_id: s.id, day: s.day, section_key: s.section_key, section_title: s.section_title, score_type: s.score_type, level: s.level, display_name: pr.display_name, division: pr.division, display: s.display }; });
+        const secs = program[day] ? program[day].blocks.flatMap(b => b.sections).map(x => ({ key: x.key, position: x.position, title: x.title })) : [];
+        return ok(build(lbRows, visible.map(s => ({ id: s.id, sets: s.sets })), secs));
+      }),
       exportRows: member((from, to, filter) => {
         filter = filter || {};
         const rows = [];
