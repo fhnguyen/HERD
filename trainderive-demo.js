@@ -22,10 +22,10 @@
 
     // ── Sample week (Mon → Sun), repeated for last, this and next week ──
     const WEEK = [
-      'NOTE: New cycle starts today. Leave a rep in the tank on the squats.\n* Coaches: set up squat racks in pairs before the 6am class.\n+\nBack Squat\n5x3 at 75–80%\nRest 2:00 between sets\n* Brace before every rep and keep the bar over midfoot.\n* If depth or bar speed breaks down, drop 10 lb.\n[SCORE: load, 5 sets]\n+\n"Cindy"\n20-minute AMRAP\n5 pull-ups\n10 push-ups\n15 air squats\n[SCORE: rr]\n+\nAccessory\n3 rounds: 10 dumbbell rows each arm, 15 hollow rocks\nWrite down the weight you used',
+      'NOTE: New cycle starts today. Leave a rep in the tank on the squats.\n* Coaches: set up squat racks in pairs before the 6am class.\n+\nBack Squat\n5x3 at **75–80%**\n_Rest 2:00 between sets_\n## plan: go heavier next week\n* Brace before every rep and keep the bar over midfoot.\n* If depth or bar speed breaks down, drop 10 lb.\n[SCORE: load, 5 sets]\n+\n"Cindy"\n20-minute AMRAP\n5 pull-ups\n10 push-ups\n15 air squats\n[SCORE: rr]\n+\nAccessory\n3 rounds: 10 dumbbell rows each arm, 15 hollow rocks\nWrite down the weight you used',
       'Double-under practice\n10 minutes, singles to doubles\n[SCORE: check]\n+\n21-15-9 for time\nThrusters (95/65 lb)\nChest-to-bar pull-ups\n10-minute cap\n[SCORE: time, cap 10:00]\n+\nCool-down\nEasy bike 10 minutes, then pigeon stretch\n[SCORE: none]',
       'Deadlift\nBuild to a heavy single for the day\n[SCORE: load]\n[LB: off]\n_____\nRow\n2,000 m for time\nNegative split: second 1,000 faster than the first\n[SCORE: time]',
-      'NOTE: Partner up for the finisher. Scale the burpees before you scale the pace.\n* Stagger heats so every athlete gets a judge for Fran.\n+\nPower Clean\nEvery minute for 10 minutes: 2 reps\nBuild across the minutes, finish at your heaviest clean double\nDemo: https://www.youtube.com/watch?v=VIDEO_ID_HERE&t=15\n[SCORE: load]\n+\n"Fran"\n21-15-9 for time\nThrusters (95/65 lb)\nPull-ups\n10-minute cap\n* Stimulus: fast and uncomfortable. Most athletes should finish in 4 to 8 minutes.\n* Scaling: pick a thruster load you can do 10+ unbroken when fresh.\n*\n* Movement standards: https://youtu.be/VIDEO_ID_HERE\n[SCORE: time, cap 10:00]\n+\nTabata Burpees\n8 rounds of 20 seconds on, 10 seconds off\nScore is your lowest round\nHow to pace it: https://www.youtube.com/shorts/VIDEO_ID_HERE\n[SCORE: reps, 8 sets, min]\n+\nSession feedback\nHow did today land?\n[SCORE: emoji]',
+      'NOTE: Partner up for the finisher. Scale the burpees before you scale the pace.\n* Stagger heats so every athlete gets a judge for Fran.\n+\nPower Clean\n4-3-2-1 at 75%, 80%, 85%, 90%\nRest 2:00 between sets\nDemo: https://www.youtube.com/watch?v=VIDEO_ID_HERE&t=15\n[SCORE: load, 4-3-2-1, @75-80-85-90%]\n+\n"Fran"\n21-15-9 for time\nThrusters (95/65 lb)\nPull-ups\n10-minute cap\n* Stimulus: fast and uncomfortable. Most athletes should finish in 4 to 8 minutes.\n* Scaling: pick a thruster load you can do 10+ unbroken when fresh.\n*\n* Movement standards: https://youtu.be/VIDEO_ID_HERE\n[SCORE: time, cap 10:00]\n+\nTabata Burpees\n8 rounds of 20 seconds on, 10 seconds off\nScore is your lowest round\nHow to pace it: https://www.youtube.com/shorts/VIDEO_ID_HERE\n[SCORE: reps, 8 sets, min]\n+\nSession feedback\nHow did today land?\n[SCORE: emoji]',
       'WIP\nFront Squat\n3x5, same weight across all sets\n[SCORE: load, 3 sets]\n+\nAssault Bike\nMax calories in 5 minutes\n[SCORE: cals]',
       'Team "Murph"\nPartner up and split reps however you like\n1-mile run\n100 pull-ups\n200 push-ups\n300 air squats\n1-mile run\nRoute map: https://example.com/murph-route\n[SCORE: time, capp 45:00]',
       '',
@@ -213,6 +213,11 @@
       getHistory: member((q, limit) => ok(scores.filter(s => s.user_id === me() && (s.section_title || '').toLowerCase().includes(String(q).toLowerCase()))
         .sort((a, b) => a.day < b.day ? 1 : -1).slice(0, limit || 100))),
 
+      getBoardSets: member((day, key) => {
+        const out = {};
+        scores.filter(s => s.day === day && s.section_key === key && canSee(s)).forEach(s => { out[s.id] = s.sets.map(x => Object.assign({}, x)); });
+        return ok(out);
+      }),
       getLeaderboard: member((day, key, o) => {
         o = o || {};
         let rows = scores.filter(s => s.day === day && s.section_key === key && canSee(s) && (!o.level || s.level === o.level));
