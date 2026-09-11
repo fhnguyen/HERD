@@ -389,6 +389,16 @@ dialog.sheet::backdrop { background: rgba(20,22,28,0.5); backdrop-filter: blur(2
 .rename .input { padding: 8px 10px; font-size: 15px; }
 .role-tag { font-family: 'DM Sans', sans-serif; vertical-align: middle; margin-left: 8px; position: relative; top: -4px; }
 @media (min-width: 640px) { .person { grid-template-columns: 1fr auto; align-items: center; } }
+.choice { border: 0; }
+.choice legend { display: block; font-size: 9px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; padding: 0; }
+.seg--choice { display: flex; width: 100%; }
+.seg--choice label { flex: 1; position: relative; cursor: pointer; }
+.seg--choice label + label { border-left: 1px solid var(--line); }
+.seg--choice input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.seg--choice span { display: block; text-align: center; font-family: var(--display); font-size: 20px; letter-spacing: 1.5px; line-height: 1; padding: 13px 10px; color: var(--ink-3); transition: background .18s, color .18s; }
+.seg--choice label:hover span { color: var(--ink); background: var(--wash); }
+.seg--choice input:checked + span { background: var(--blue); color: #fff; }
+.seg--choice input:focus-visible + span { outline: 2px solid var(--gold); outline-offset: -2px; }
 .auth-switch { margin-top: 18px; font-size: 14px; color: var(--ink-2); }
 .pw-wrap { position: relative; }
 .pw-wrap .input { padding-right: 70px; }
@@ -516,7 +526,7 @@ const CONFIG = {
   LOGO_URL: '',                     // optional image for the nav; the wordmark shows when blank
   // Header background, currently the group photo from the Throwdown page. Replace, or set to '' for none.
   HEADER_PHOTO: 'https://images.squarespace-cdn.com/content/629fa4eebc757d4e15d9eec4/ce6a2bf7-371c-41a4-a096-40a7c414afc4/group1.jpg?content-type=image%2Fjpeg',
-  DIVISIONS: ['Men', 'Women'],      // leaderboard filters; athletes pick one in their account
+  DIVISIONS: ['Male', 'Female'],    // leaderboard groups: chosen at sign-up, filterable on leaderboards, editable in the account sheet
   XLSX_URL: 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
   SUPABASE_JS_URL: 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
 };
@@ -626,6 +636,7 @@ async function boot() {
     S.api = TrainDeriveApi(S.db, TD);
     const { data } = await S.db.auth.getSession();
     S.api.setUserId(data && data.session ? data.session.user.id : null);
+    S.authMeta = data && data.session ? (data.session.user.user_metadata || {}) : {};
     S.db.auth.onAuthStateChange((event, session) => {
       if (event === 'INITIAL_SESSION') return;
       setTimeout(() => onAuthChange(event, session), 0); // supabase-js: don't await other calls inside the callback
@@ -649,6 +660,7 @@ async function boot() {
 
 async function onAuthChange(event, session) {
   S.api.setUserId(session && session.user ? session.user.id : null);
+  S.authMeta = session && session.user ? (session.user.user_metadata || {}) : {};
   if (event === 'PASSWORD_RECOVERY') openAuth('newpass');
   await refreshProfile();
   renderNav();
@@ -660,6 +672,12 @@ async function refreshProfile() {
   if (!signedIn()) return;
   const r = await S.api.getProfile();
   S.profile = r.data || null;
+  // The group picked at sign-up travels with the account; copy it onto the profile the first time they sign in
+  const picked = S.authMeta && S.authMeta.division;
+  if (S.profile && !S.profile.division && picked && CONFIG.DIVISIONS.indexOf(picked) >= 0) {
+    const u = await S.api.updateProfile({ division: picked });
+    if (u.data) S.profile = u.data;
+  }
 }
 
 function route() {
@@ -1460,7 +1478,9 @@ function renderAuth(mode, msg) {
   } else {
     h = '<form id="auth-form" novalidate>';
     if (mode === 'signup') h += '<p style="font-size:14.5px;line-height:1.6;color:var(--ink-2)">Log your scores, see leaderboards, and comment on everyone’s results. It’s free.</p>' +
-      '<label class="field"><span>Name shown on leaderboards</span><input class="input" id="a-name" autocomplete="name" maxlength="60" required></label>';
+      '<label class="field"><span>Name shown on leaderboards</span><input class="input" id="a-name" autocomplete="name" maxlength="60" required></label>' +
+      (CONFIG.DIVISIONS.length ? '<fieldset class="field choice"><legend>Leaderboard group</legend><div class="seg seg--choice">' +
+        CONFIG.DIVISIONS.map(d => '<label><input type="radio" name="a-div" value="' + esc(d) + '"><span>' + esc(d) + '</span></label>').join('') + '</div></fieldset>' : '');
     if (mode !== 'newpass') h += email;
     if (mode === 'signin') h += pw('a-pw', 'Password', 'current-password');
     if (mode === 'signup') h += pw('a-pw', 'Password (8+ characters)', 'new-password');
@@ -1484,13 +1504,15 @@ async function submitAuth(mode, form) {
   const email = val('a-email'), pw = document.getElementById('a-pw') ? document.getElementById('a-pw').value : '';
   if (mode !== 'newpass' && !/^\S+@\S+\.\S+$/.test(email)) return err('Enter a valid email address.');
   if (mode === 'signup' && !val('a-name')) return err('Enter the name you want on leaderboards.');
+  const pickedDiv = (form.querySelector('input[name="a-div"]:checked') || {}).value;
+  if (mode === 'signup' && CONFIG.DIVISIONS.length && !pickedDiv) return err('Choose your leaderboard group: ' + CONFIG.DIVISIONS.join(' or ') + '.');
   if ((mode === 'signup' || mode === 'newpass') && pw.length < 8) return err('Use at least 8 characters for your password.');
   if (mode === 'signin' && !pw) return err('Enter your password.');
   const btn = form.querySelector('[type="submit"]'); btn.disabled = true;
   const here = location.origin + location.pathname;
   let r;
   if (mode === 'signin') r = await S.api.signIn(email, pw);
-  if (mode === 'signup') r = await S.api.signUp(email, pw, val('a-name'), here);
+  if (mode === 'signup') r = await S.api.signUp(email, pw, val('a-name'), here, undefined, pickedDiv);
   if (mode === 'reset') r = await S.api.sendPasswordReset(email, here);
   if (mode === 'newpass') r = await S.api.setNewPassword(pw);
   btn.disabled = false;
