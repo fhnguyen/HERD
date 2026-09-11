@@ -45,10 +45,11 @@
       isSignedIn: () => !!userId,
 
       /** Self-serve account. With "Confirm email" on, the user must click the emailed link before signing in. */
-      /** captchaToken only if CAPTCHA protection is enabled in Supabase (hCaptcha / Turnstile widget result). */
-      signUp: (email, password, displayName, redirectTo, captchaToken) => wrap(db.auth.signUp({
+      /** captchaToken only if CAPTCHA protection is enabled in Supabase (hCaptcha / Turnstile widget result).
+       *  division (e.g. 'Male' / 'Female') is saved with the account; the app copies it to the profile on first sign-in. */
+      signUp: (email, password, displayName, redirectTo, captchaToken, division) => wrap(db.auth.signUp({
         email, password,
-        options: { data: { display_name: String(displayName || '').trim().slice(0, 60) }, emailRedirectTo: redirectTo, captchaToken },
+        options: { data: { display_name: String(displayName || '').trim().slice(0, 60), division: division || null }, emailRedirectTo: redirectTo, captchaToken },
       })),
       signIn: (email, password, captchaToken) => wrap(db.auth.signInWithPassword({ email, password, options: { captchaToken } })),
       signOut: () => wrap(db.auth.signOut()),
