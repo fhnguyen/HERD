@@ -279,7 +279,23 @@
   //   line 1 WIP/DRAFT marker · NOTE: … · "+" between sections · "_____" AM/PM
   // ══════════════════════════════════════════════════════════════════════
   const STATUS_MARKER_RE = /^\s*\[?\s*(WIP|DRAFT|IN[ -]?PROGRESS|INCOMPLETE|TBD)\s*\]?\s*:?\s*$/i;
-  const COACH_NOTE_RE = /^\s*\*+\s?/;   // a line starting with * is a coach's note
+  const COACH_NOTE_RE = /^\s*\*(?!\*)\s?/;   // a line starting with * is a coach's note (** starts bold text instead)
+
+  // ## hidden comments: never published. A line starting with ## is dropped; " ## ..." ends a line early.
+  function stripHiddenComments(text) {
+    return String(text || '').replace(/\r\n?/g, '\n').split('\n').reduce((out, line) => {
+      if (/^\s*##/.test(line)) return out;
+      out.push(line.replace(/\s+##.*$/, ''));
+      return out;
+    }, []).join('\n');
+  }
+
+  // **bold** and _italic_ markers, removed where plain text is needed (titles, exports)
+  function stripInlineMarks(text) {
+    return String(text || '')
+      .replace(/\*\*(?=\S)([^\n]*?\S)\*\*/g, '$1')
+      .replace(/(^|[\s(\["'])_(?=[^\s_])([^_\n]*?[^\s_]|[^\s_])_(?=$|[\s.,;:!?)\]"'])/g, '$1$2');
+  }
 
   // Pull coach's-note lines (starting with *) out of a block of text.
   // A line that is just "*" becomes a blank line inside the notes (paragraph break).
@@ -296,6 +312,7 @@
   const SECTION_RE = /^\+\s*$/;
 
   function parseTrainingCell(raw) {
+    raw = stripHiddenComments(raw);
     const warnings = [];
     let dayLb = null;
 
@@ -367,7 +384,7 @@
         }).join('\n').trim();
         const s = {
           key: toAlpha(position), position: position++, blockLabel: b.label,
-          title: (body.split('\n')[0] || '').trim(),
+          title: stripInlineMarks((body.split('\n')[0] || '').trim()),
           text: body,
           coachNotes: split.notes,
           _scoreRaw: scoreRaw, _lbRaw: lbRaw,
@@ -391,6 +408,7 @@
   //   C: [SCORE: reps] [LB: off]
   //   [LB-DAY: coach]
   function parseScoringCell(raw) {
+    raw = stripHiddenComments(raw);
     const out = { bySection: {}, dayLb: null, warnings: [] };
     String(raw || '').replace(/\r\n?/g, '\n').split('\n').forEach(line => {
       const s = line.trim(); if (!s) return;
@@ -683,9 +701,9 @@
 
   // ══════════════════════════════════════════════════════════════════════
   const TD = {
-    VERSION: '1.2.0', DEFAULTS, TYPES,
+    VERSION: '1.3.0', DEFAULTS, TYPES,
     parseScoreSpec, normalizeSpec, formatScoreTag, describeSpec, parseLeaderboardMode,
-    parseTrainingCell, parseScoringCell, finalizeSections, parseProgramRows, parseCSV,
+    parseTrainingCell, parseScoringCell, finalizeSections, parseProgramRows, parseCSV, stripHiddenComments, stripInlineMarks,
     isDateHeader, sheetDateToISO,
     computeScore, parseTime, formatTime, toAlpha,
   };
