@@ -238,6 +238,8 @@ button { cursor: pointer; background: none; border: 0; }
 .coach-notes-text { font-size: 15px; line-height: 1.65; color: var(--ink-2); white-space: pre-line; overflow-wrap: anywhere; }
 .coach-notes-text a { color: var(--blue); font-weight: 600; text-decoration: none; border-bottom: 2px solid rgba(0,68,223,0.25); }
 .notes-vis { display: inline-block; margin-bottom: 8px; }
+.card-text strong, .note strong, .coach-notes-text strong { font-weight: 700; color: var(--ink); }
+.card-text em, .note em, .coach-notes-text em { font-style: italic; }
 .note a { color: var(--blue); font-weight: 600; text-decoration: none; border-bottom: 2px solid rgba(0,68,223,0.25); }
 .panel { border-top: 1px solid var(--line); background: #FAFBFE; padding: 16px 20px 20px; }
 .panel-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
@@ -607,6 +609,17 @@ function linkify(html) {
     return '<a href="' + esc(raw) + '" target="_blank" rel="noopener">' + label + '</a>' + tail;
   });
 }
+/* **bold** and _italic_ in coach-written text. Links are split out first, so underscores inside URLs are never touched.
+   Runs on already-escaped text, so markers can only ever produce <strong>/<em>. */
+function formatInline(html) {
+  return html
+    .replace(/\*\*(?=\S)([^\n]*?\S)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[\s(\[>;])_(?=[^\s_])([^_\n]*?[^\s_]|[^\s_])_(?=$|[\s.,;:!?)\]<&])/gm, '$1<em>$2</em>');
+}
+function richText(html) {
+  return html.split(/(\bhttps?:\/\/[^\s<]+)/g).map((part, i) => i % 2 ? linkify(part) : formatInline(part)).join('');
+}
+
 function toggleVideo(btn) {
   const next = btn.nextElementSibling;
   if (next && next.classList.contains('video-wrap')) {          // close: remove the player so playback stops
@@ -837,7 +850,7 @@ function renderBody() {
   }
   let html = '';
   if (d.status === 'wip') html += '<div class="note note--wip"><b>Your coach is still writing this day.</b> You can train and log scores, but sections may change.</div>';
-  if (d.daily_note) html += '<div class="note">' + linkify(esc(d.daily_note)) + '</div>';
+  if (d.daily_note) html += '<div class="note">' + richText(esc(d.daily_note)) + '</div>';
   if (d.coach_notes && d.coach_notes.day) html += '<div class="day-notes">' + notesHTML(S.day + '-day', d.coach_notes.day, 'Coach’s notes for today') + '</div>';
 
   const secs = allSections(), scored = secs.filter(s => s.score.type !== 'none');
@@ -899,7 +912,7 @@ function notesHTML(id, text, label) {
   return '<div class="notes-row"><button type="button" class="notes-btn" data-act="notes" data-notes="' + esc(id) + '" aria-expanded="' + open + '" aria-controls="notes-' + esc(id) + '">' + esc(label) + '</button></div>' +
     '<div class="coach-notes" id="notes-' + esc(id) + '"' + (open ? '' : ' hidden') + '>' +
       (coachesOnly ? '<span class="tag tag--quiet notes-vis">Coaches only</span>' : '') +
-      '<div class="coach-notes-text">' + linkify(esc(text)) + '</div></div>';
+      '<div class="coach-notes-text">' + richText(esc(text)) + '</div></div>';
 }
 
 /* ── Section card ────────────────────────────────────── */
@@ -951,7 +964,7 @@ function cardHTML(sec, i) {
       '<span class="card-key">' + esc(sec.key) + '</span><span class="card-title">' + esc(sec.title || 'Section ' + sec.key) + '</span>' +
       '<span class="card-sum">' + esc(cardSummary(sec, row)) + '</span><span class="card-chev" aria-hidden="true"></span></button></h3></div>' +
     '<div class="card-body" id="' + esc(bodyId) + '"' + (collapsed ? ' hidden' : '') + '>' +
-      (body ? '<div class="card-text">' + linkify(esc(body)) + '</div>' : '<div style="height:18px"></div>') +
+      (body ? '<div class="card-text">' + richText(esc(body)) + '</div>' : '<div style="height:18px"></div>') +
       (S.dayData && S.dayData.coach_notes && S.dayData.coach_notes[sec.key] ? '<div class="card-notes">' + notesHTML(S.day + '-' + sec.key, S.dayData.coach_notes[sec.key], 'Coach’s notes') + '</div>' : '') +
       panel + '</div></article>';
 }
