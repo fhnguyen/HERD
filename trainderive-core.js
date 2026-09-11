@@ -14,7 +14,7 @@
   // ══════════════════════════════════════════════════════════════════════
   const DEFAULTS = {
     leaderboardRanked:   'on',   // sections with a ranked score type and no [LB] tag
-    leaderboardUnranked: 'off',  // check / emoji / text sections with no [LB] tag
+    leaderboardUnranked: 'on',   // check / emoji / text sections (including untagged ones) with no [LB] tag
     untaggedType:        'text', // sections with no [SCORE] tag keep the classic free-text results box
     loadUnit:            'lb',   // default unit for load when the tag doesn't say
   };
@@ -413,7 +413,7 @@
         if (!lb) cell.warnings.push(s.key + ': unknown LB value "' + lbRaw + '"');
       }
       if (spec.type === 'none') lb = 'off';
-      else if (!lb && dayLb && !spec.implicit) lb = dayLb;
+      else if (!lb && dayLb) lb = dayLb;
       else if (!lb) lb = spec.ranked ? DEFAULTS.leaderboardRanked : DEFAULTS.leaderboardUnranked;
 
       s.score = spec;
@@ -659,7 +659,7 @@
 
   // ══════════════════════════════════════════════════════════════════════
   const TD = {
-    VERSION: '1.0.0', DEFAULTS, TYPES,
+    VERSION: '1.1.0', DEFAULTS, TYPES,
     parseScoreSpec, normalizeSpec, formatScoreTag, describeSpec, parseLeaderboardMode,
     parseTrainingCell, parseScoringCell, finalizeSections, parseProgramRows, parseCSV,
     isDateHeader, sheetDateToISO,

@@ -347,6 +347,14 @@ dialog.sheet::backdrop { background: rgba(20,22,28,0.5); backdrop-filter: blur(2
 .who small { display: block; font-size: 12.5px; color: var(--ink-3); line-height: 1.45; margin-top: 1px; }
 .val { font-family: var(--display); font-size: 30px; line-height: 1; color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
 .val[data-capped] { color: var(--magenta); font-size: 22px; }
+.board-count { font-size: 10px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; color: var(--ink-3); margin: 2px 0 2px; }
+.board-count b { color: var(--blue); font-weight: 800; }
+.row--feed { grid-template-columns: 1fr; }
+.row--feed .row-acts, .row--feed .comments { grid-column: 1 / -1; }
+.feed-result { font-size: 15.5px; line-height: 1.55; color: var(--ink); margin: 4px 0 3px; white-space: pre-line; overflow-wrap: anywhere; }
+.feed-muted { font-size: 13px; color: var(--ink-3); }
+.who .feed-notes { color: var(--ink-2); font-style: italic; }
+.panel-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; }
 .row-acts { grid-column: 2 / -1; display: flex; gap: 14px; margin-top: 6px; }
 .like { font-size: 10px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-3); display: inline-flex; gap: 6px; align-items: center; padding: 6px 0; }
 .like span { font-size: 13px; }
@@ -721,6 +729,11 @@ async function loadDay(iso, keepDrafts) {
   renderWeek();
   renderTitle();
   renderBody();
+  if (S.pendingBoard && signedIn()) {
+    const pb = S.pendingBoard; S.pendingBoard = null;
+    const sec = Date.now() - pb.at < 120000 && sectionByKey(pb.key);
+    if (sec && boardVisible(sec)) openBoard(sec);
+  }
   if (S.pendingKey && signedIn()) {
     const k = S.pendingKey; S.pendingKey = null;
     const card = document.querySelector('.card[data-key="' + k + '"]');
@@ -863,10 +876,12 @@ function cardHTML(sec, i) {
 
   let panel = '';
   if (scored) {
-    if (!signedIn()) panel = '<div class="panel panel--closed"><button class="btn-ghost btn-sm" data-act="auth" data-mode="signin">Log score</button></div>';
+    if (!signedIn()) panel = '<div class="panel panel--closed"><div class="panel-acts"><button class="btn-ghost btn-sm" data-act="auth" data-mode="signin">Log score</button>' +
+      (sec.leaderboard === 'on' ? '<button class="text-btn" data-act="auth" data-mode="signin" data-board="1">Leaderboard</button>' : '') + '</div></div>';
     else if (S.editing[slot.id]) panel = '<div class="panel">' + editorHTML(slot) + '</div>';
     else if (row) panel = '<div class="panel">' + loggedHTML(slot) + '</div>';
-    else panel = '<div class="panel panel--closed"><button class="btn-ghost btn-sm" data-act="edit">Log score</button></div>';
+    else panel = '<div class="panel panel--closed"><div class="panel-acts"><button class="btn-ghost btn-sm" data-act="edit">Log score</button>' +
+      (boardVisible(sec) ? '<button class="text-btn" data-act="board">Leaderboard</button>' : '') + '</div></div>';
   }
 
   return '<article class="card" data-key="' + esc(sec.key) + '" data-slot="' + esc(slot.id) + '" data-state="' + state + '" style="--accent:' + ACCENTS[i % 4][0] + ';--accent-ink:' + ACCENTS[i % 4][1] + '">' +
@@ -958,7 +973,6 @@ function editorHTML(slot) {
 
   if (spec.type === 'check') {
     return '<div class="panel-row"><button class="btn-primary btn-sm" data-act="check">Mark as done</button>' +
-      (slot.own && boardVisible(sec) ? '<button class="text-btn" data-act="board">See who’s done it</button>' : '') +
       (slot.own ? '<button class="text-btn text-btn--quiet" data-act="cancel">Cancel</button>' : '') +
       (!slot.own && row ? '<button class="text-btn text-btn--danger" data-act="remove">Delete result</button>' : '') + '</div>' + err;
   }
@@ -1110,7 +1124,9 @@ async function onEntryClick(e) {
       S.notesOpen[id] = open; t.setAttribute('aria-expanded', String(open)); if (panel) panel.hidden = !open;
       return;
     }
-    case 'auth': return openAuth(t.dataset.mode || 'signin', slot && slot.key);
+    case 'auth':
+      if (t.dataset.board && slot) { S.pendingBoard = { key: slot.key, at: Date.now() }; return openAuth(t.dataset.mode || 'signin'); }
+      return openAuth(t.dataset.mode || 'signin', slot && slot.key);
     case 'board': return slot && openBoard(slot.sec());
     case 'feel': {
       const v = Number(t.dataset.v), prev = S.my.feel;
@@ -1268,34 +1284,55 @@ function controlsHTML() {
 
 function renderBoard() {
   const b = S.board, meId = S.profile && S.profile.id, coach = isCoach();
+  const type = b.sec.score.type, ranked = TD.TYPES[type].ranked;
+  const rows = ranked ? b.rows : b.rows.slice().reverse();   // text, checkbox and rating results: newest first
   let h = controlsHTML();
-  if (!b.rows.length) {
-    h += '<p class="empty">' + (S.my.scores[b.sec.key] ? 'No one else has logged a score here yet.' : 'No scores yet. Log yours and you’ll be first on the board.') + '</p>';
+  if (!rows.length) {
+    h += '<p class="empty">' + (S.my.scores[b.sec.key] ? 'No one else has logged this yet.' : 'No one has logged this yet. Log yours and you’ll be first.') + '</p>';
   } else {
-    h += '<ol class="board">' + b.rows.map(r => {
+    h += '<p class="board-count"><b>' + rows.length + '</b> ' + (rows.length === 1 ? 'athlete' : 'athletes') + ' logged' + (ranked && b.level ? ' · ' + (b.level === 'rx' ? 'RX' : 'Scaled') : '') + (b.division ? ' · ' + esc(b.division) : '') + '</p>';
+    h += '<ol class="board">' + rows.map(r => {
+      if (!ranked) return feedRowHTML(r, meId, coach);
       const sub = [r.division, r.level === 'scaled' && !b.level ? 'Scaled' : null, r.notes].filter(Boolean).join(' · ');
       const val = b.sec.score.type === 'check' ? '✓' : r.display;
-      const open = b.open[r.score_id];
-      const confirming = b.confirm === r.score_id;
       return '<li class="row"' + (r.user_id === meId ? ' data-me' : '') + ' data-id="' + esc(r.score_id) + '">' +
         '<span class="place" data-p="' + (r.place || '') + '">' + (r.place || '–') + '</span>' +
         '<div class="who"><b>' + esc(r.display_name || 'Athlete') + (r.user_id === meId ? ' (you)' : '') + '</b>' +
           (sub ? '<small>' + esc(sub) + '</small>' : '') +
           (r.edited_by_name ? '<small class="edited-by">Edited by ' + esc(r.edited_by_name) + '</small>' : '') + '</div>' +
         '<span class="val"' + (r.is_capped ? ' data-capped' : '') + '>' + esc(val) + '</span>' +
-        '<div class="row-acts">' +
-          '<button class="like" data-bact="like" aria-pressed="' + !!r.liked_by_me + '" aria-label="' + (r.liked_by_me ? 'Remove like' : 'Like') + ' for ' + esc(r.display_name) + '"><span aria-hidden="true">✦</span>' + (r.like_count || 0) + '</button>' +
-          '<button class="like" data-bact="comments" aria-expanded="' + !!open + '">' + (r.comment_count ? r.comment_count + (r.comment_count === 1 ? ' comment' : ' comments') : 'Comment') + '</button>' +
-          (coach ? '<span class="row-coach"><button class="like" data-bact="edit">Edit</button>' +
-            '<button class="like like--danger" data-bact="delete"' + (confirming ? ' data-confirm="yes"' : '') + '>' + (confirming ? 'Confirm delete' : 'Delete') + '</button></span>' : '') +
-        '</div>' +
-        (open ? '<div class="comments">' + commentsHTML(r, open) + '</div>' : '') +
-      '</li>';
+        rowActsHTML(r, coach) + '</li>';
     }).join('') + '</ol>';
   }
   const sc = $('#board-bd').scrollTop;
   $('#board-bd').innerHTML = h;
   $('#board-bd').scrollTop = sc;
+}
+
+function rowActsHTML(r, coach) {
+  const b = S.board, open = b.open[r.score_id], confirming = b.confirm === r.score_id;
+  return '<div class="row-acts">' +
+      '<button class="like" data-bact="like" aria-pressed="' + !!r.liked_by_me + '" aria-label="' + (r.liked_by_me ? 'Remove like' : 'Like') + ' for ' + esc(r.display_name) + '"><span aria-hidden="true">✦</span>' + (r.like_count || 0) + '</button>' +
+      '<button class="like" data-bact="comments" aria-expanded="' + !!open + '">' + (r.comment_count ? r.comment_count + (r.comment_count === 1 ? ' comment' : ' comments') : 'Comment') + '</button>' +
+      (coach ? '<span class="row-coach"><button class="like" data-bact="edit">Edit</button>' +
+        '<button class="like like--danger" data-bact="delete"' + (confirming ? ' data-confirm="yes"' : '') + '>' + (confirming ? 'Confirm delete' : 'Delete') + '</button></span>' : '') +
+    '</div>' +
+    (open ? '<div class="comments">' + commentsHTML(r, open) + '</div>' : '');
+}
+
+// Results that aren't ranked (written results, done/not done, ratings) read as a feed
+function feedRowHTML(r, meId, coach) {
+  const type = S.board.sec.score.type;
+  const result = type === 'check' ? '✓ Done' : type === 'emoji' ? esc(r.display) + ' <span class="feed-muted">' + esc(r.value) + ' / 5</span>' : esc(r.display);
+  const when = ago(r.created_at);
+  const meta = [r.division, when === 'now' ? 'Logged just now' : 'Logged ' + when + ' ago'].filter(Boolean).join(' · ');
+  return '<li class="row row--feed"' + (r.user_id === meId ? ' data-me' : '') + ' data-id="' + esc(r.score_id) + '">' +
+    '<div class="who"><b>' + esc(r.display_name || 'Athlete') + (r.user_id === meId ? ' (you)' : '') + '</b>' +
+      '<p class="feed-result">' + result + '</p>' +
+      (r.notes ? '<small class="feed-notes">' + esc(r.notes) + '</small>' : '') +
+      '<small>' + esc(meta) + '</small>' +
+      (r.edited_by_name ? '<small class="edited-by">Edited by ' + esc(r.edited_by_name) + '</small>' : '') + '</div>' +
+    rowActsHTML(r, coach) + '</li>';
 }
 
 function commentsHTML(row, state) {

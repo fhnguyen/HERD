@@ -22,7 +22,7 @@
 
     // ── Sample week (Mon → Sun), repeated for last, this and next week ──
     const WEEK = [
-      'NOTE: New cycle starts today. Leave a rep in the tank on the squats.\n* Coaches: set up squat racks in pairs before the 6am class.\n+\nBack Squat\n5x3 at 75–80%\nRest 2:00 between sets\n* Brace before every rep and keep the bar over midfoot.\n* If depth or bar speed breaks down, drop 10 lb.\n[SCORE: load, 5 sets]\n+\n"Cindy"\n20-minute AMRAP\n5 pull-ups\n10 push-ups\n15 air squats\n[SCORE: rr]',
+      'NOTE: New cycle starts today. Leave a rep in the tank on the squats.\n* Coaches: set up squat racks in pairs before the 6am class.\n+\nBack Squat\n5x3 at 75–80%\nRest 2:00 between sets\n* Brace before every rep and keep the bar over midfoot.\n* If depth or bar speed breaks down, drop 10 lb.\n[SCORE: load, 5 sets]\n+\n"Cindy"\n20-minute AMRAP\n5 pull-ups\n10 push-ups\n15 air squats\n[SCORE: rr]\n+\nAccessory\n3 rounds: 10 dumbbell rows each arm, 15 hollow rocks\nWrite down the weight you used',
       'Double-under practice\n10 minutes, singles to doubles\n[SCORE: check]\n+\n21-15-9 for time\nThrusters (95/65 lb)\nChest-to-bar pull-ups\n10-minute cap\n[SCORE: time, cap 10:00]\n+\nCool-down\nEasy bike 10 minutes, then pigeon stretch\n[SCORE: none]',
       'Deadlift\nBuild to a heavy single for the day\n[SCORE: load]\n[LB: off]\n_____\nRow\n2,000 m for time\nNegative split: second 1,000 faster than the first\n[SCORE: time]',
       'NOTE: Partner up for the finisher. Scale the burpees before you scale the pace.\n* Stagger heats so every athlete gets a judge for Fran.\n+\nPower Clean\nEvery minute for 10 minutes: 2 reps\nBuild across the minutes, finish at your heaviest clean double\nDemo: https://www.youtube.com/watch?v=VIDEO_ID_HERE&t=15\n[SCORE: load]\n+\n"Fran"\n21-15-9 for time\nThrusters (95/65 lb)\nPull-ups\n10-minute cap\n* Stimulus: fast and uncomfortable. Most athletes should finish in 4 to 8 minutes.\n* Scaling: pick a thruster load you can do 10+ unbroken when fresh.\n*\n* Movement standards: https://youtu.be/VIDEO_ID_HERE\n[SCORE: time, cap 10:00]\n+\nTabata Burpees\n8 rounds of 20 seconds on, 10 seconds off\nScore is your lowest round\nHow to pace it: https://www.youtube.com/shorts/VIDEO_ID_HERE\n[SCORE: reps, 8 sets, min]\n+\nSession feedback\nHow did today land?\n[SCORE: emoji]',
@@ -93,6 +93,7 @@
         case 'cals': return { level, sets: [{ value: men ? between(70, 95) : between(48, 72) }] };
         case 'check': return { level, sets: [{ done: true }] };
         case 'emoji': return { level, sets: [{ rating: between(3, 5) }] };
+        case 'text': return { level, sets: [{ text: ['35 lb dumbbells, hollow rocks unbroken', 'Used 40s on the rows, broke rocks into 8/7', '30 lb DBs. Scaled hollow rocks to tuck rocks', '45s felt heavy by round 3', '50 lb rows, all unbroken'][between(0, 4)] }] };
         case 'time':
           if (s.cap && rand() < 0.2) return { level, sets: [{ capped: true, reps: between(52, 88) }] };
           if (/row/.test(t)) return { level, sets: [{ time: between(400, 540) }] };
