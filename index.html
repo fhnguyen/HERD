@@ -699,13 +699,15 @@ async function boot() {
     bar.hidden = false;
   }
 
-  const tr = await S.api.listTracks();
+  // Older trainderive-api.js / trainderive-demo.js have no tracks: carry on with one program
+  // and hide the selector rather than failing to start.
+  const tr = S.api.listTracks ? await S.api.listTracks() : { data: [] };
   S.tracks = (tr.data || []).slice().sort((a, b) => (a.position - b.position) || String(a.slug).localeCompare(String(b.slug)));
   let remembered = null; try { remembered = localStorage.getItem('herd-track'); } catch (e) {}
   const fromHash = location.hash.replace('#', '').split('/').filter(Boolean).find(x => !/^\d{4}-\d{2}-\d{2}$/.test(x));
   const wanted = [fromHash, remembered, defaultTrack()].find(x => x && S.tracks.some(t => t.slug === x)) || defaultTrack();
   S.track = wanted;
-  S.api.setTrack(wanted);
+  if (S.api.setTrack) S.api.setTrack(wanted);
   renderTrackBar();
 
   const set = await S.api.getSettings();
@@ -757,7 +759,7 @@ const defaultTrack = () => { const d = S.tracks.find(t => t.is_default) || S.tra
 function setTrack(slug, o) {
   o = o || {};
   S.track = slug;
-  S.api.setTrack(slug);
+  if (S.api.setTrack) S.api.setTrack(slug);
   try { localStorage.setItem('herd-track', slug); } catch (e) {}
   const sel = $('#track-sel'); if (sel && sel.value !== slug) sel.value = slug;
   if (o.silent) return;
