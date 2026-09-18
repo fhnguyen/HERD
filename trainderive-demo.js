@@ -8,7 +8,7 @@
 (function (root) {
   'use strict';
 
-  function TrainDeriveDemo(TD) {
+  function TrainDeriveDemo(TD, opts) {
     const ok = data => Promise.resolve({ data, error: null });
     const fail = (message, code) => Promise.resolve({ data: null, error: { message, code } });  // eslint-disable-line
     const AUTH = { code: 'auth_required', message: 'Sign in to log results and see leaderboards' };
@@ -30,22 +30,44 @@
       'Team "Murph"\nPartner up and split reps however you like\n1-mile run\n100 pull-ups\n200 push-ups\n300 air squats\n1-mile run\nRoute map: https://example.com/murph-route\n[SCORE: time, capp 45:00]',
       '',
     ];
+    // A second sample program, so the track selector has something to switch to
+    const WOD_WEEK = [
+      'NOTE: Welcome in. Say hi to someone new.\n+\n"Cindy"\n20-minute AMRAP\n5 pull-ups\n10 push-ups\n15 air squats\n[SCORE: rr]\n+\nCool-down\nEasy bike, 8 minutes\n[SCORE: none]',
+      'Push Press\n5x5 at a weight you can keep for all five sets\n[SCORE: load, 5x5]\n+\n12-minute AMRAP\n10 wall balls\n10 box step-ups\n[SCORE: rr]',
+      'Row 500 m × 4\nRest 2:00 between efforts. Score is the total.\n[SCORE: time, 4 sets]\n+\nAccessory\n3 rounds: 12 ring rows, 20 hollow rocks\nWrite down what you scaled',
+      '"Chipper"\nFor time:\n50 double-unders\n40 sit-ups\n30 kettlebell swings\n20 burpees\n10 pull-ups\n20-minute cap\n* Pick a swing weight you can move in sets of 10.\n[SCORE: time, cap 20:00]\n+\nSession feedback\nHow did that land?\n[SCORE: emoji]',
+      'Back Squat\n3x8 at a moderate weight\n[SCORE: load, 3x8]\n+\nAssault Bike\n8 rounds: 20 seconds hard, 40 seconds easy\nScore is total calories\n[SCORE: cals]',
+      'Partner workout\n30-minute AMRAP, split as you like:\n400 m run (together)\n30 deadlifts\n30 hand-release push-ups\n[SCORE: rr]',
+      '',
+    ];
     const monday = (() => { const d = new Date(today + 'T12:00:00'); const off = (d.getDay() + 6) % 7; d.setDate(d.getDate() - off); return iso(d); })();
-    const program = {};
-    for (let w = -1; w <= 1; w++) {
-      for (let i = 0; i < 7; i++) {
-        const day = addDays(monday, w * 7 + i);
-        const cell = TD.finalizeSections(TD.parseTrainingCell(WEEK[i]));
-        const coachNotes = {}; if (cell.coachNotes) coachNotes.day = cell.coachNotes;
-        cell.blocks.forEach(b => b.sections.forEach(sec => { if (sec.coachNotes) coachNotes[sec.key] = sec.coachNotes; delete sec.coachNotes; }));
-        program[day] = {
-          day, tab_name: 'Demo program', status: cell.status, daily_note: cell.dailyNote,
-          is_rest_day: cell.isRestDay, day_lb: cell.dayLb, blocks: cell.blocks, coach_notes: coachNotes,
-          published_at: new Date().toISOString(), warnings: cell.warnings,
-        };
+    const tracks = [
+      { slug: 'herd', name: 'HERD', position: 0, is_default: true, week: WEEK, tab: 'HERD program' },
+      { slug: 'wod', name: 'WOD', position: 1, is_default: false, week: WOD_WEEK, tab: 'WOD program' },
+    ];
+    // Which tracks this demo offers. The live app lists whatever is in the database;
+    // the demo shows just HERD so it matches, and takes { tracks: ['herd','wod'] } to show both.
+    const shown = (opts && opts.tracks) || ['herd'];
+    let track = 'herd';
+    const program = {};                                   // program[track][day]
+    tracks.forEach(t => {
+      program[t.slug] = {};
+      for (let w = -1; w <= 1; w++) {
+        for (let i = 0; i < 7; i++) {
+          const day = addDays(monday, w * 7 + i);
+          const cell = TD.finalizeSections(TD.parseTrainingCell(t.week[i]));
+          const coachNotes = {}; if (cell.coachNotes) coachNotes.day = cell.coachNotes;
+          cell.blocks.forEach(b => b.sections.forEach(sec => { if (sec.coachNotes) coachNotes[sec.key] = sec.coachNotes; delete sec.coachNotes; }));
+          program[t.slug][day] = {
+            track: t.slug, day, tab_name: t.tab, status: cell.status, daily_note: cell.dailyNote,
+            is_rest_day: cell.isRestDay, day_lb: cell.dayLb, blocks: cell.blocks, coach_notes: coachNotes,
+            published_at: new Date().toISOString(), warnings: cell.warnings,
+          };
+        }
       }
-    }
-    const sectionOf = (day, key) => { const d = program[day]; if (!d) return null; for (const b of d.blocks) for (const s of b.sections) if (s.key === key) return s; return null; };
+    });
+    const prog = (t) => program[t || track] || {};
+    const sectionOf = (day, key, t) => { const d = prog(t)[day]; if (!d) return null; for (const b of d.blocks) for (const s of b.sections) if (s.key === key) return s; return null; };
 
     // ── People ──
     const profiles = {};
@@ -58,16 +80,17 @@
     Object.values(profiles).forEach(p => { p.created_at = new Date(Date.now() - 86400000 * 90).toISOString(); });
 
     const scores = [], likes = [], comments = [], feels = {};
-    let settings = { public_days_ahead: null, timezone: 'America/Chicago', coach_notes_visibility: 'everyone' };
+    let settings = { public_window: 'all', public_days_ahead: null, timezone: 'America/Chicago', coach_notes_visibility: 'everyone' };
     let userId = null;
     const listeners = [];
 
-    function storeScore(user, day, section, entry, actor) {
+    function storeScore(user, day, section, entry, actor, trk) {
+      const tr = trk || track;
       const r = TD.computeScore(section.score, entry);
       if (!r.ok) return { error: { message: r.errors.join(' · '), validation: r.errors } };
-      let row = scores.find(s => s.user_id === user && s.day === day && s.section_key === section.key);
+      let row = scores.find(s => s.user_id === user && s.track === tr && s.day === day && s.section_key === section.key);
       const fields = {
-        user_id: user, day, section_key: section.key, section_title: section.title, score_type: r.type,
+        user_id: user, track: tr, day, section_key: section.key, section_title: section.title, score_type: r.type,
         score_spec: TD.normalizeSpec(section.score), level: r.level, sets: r.sets, value: r.value,
         rank_value: r.rankValue, display: r.display, is_capped: r.capped,
         notes: entry.notes ? String(entry.notes).slice(0, 2000) : null, updated_at: new Date().toISOString(),
@@ -103,18 +126,22 @@
       }
     };
     const NOTES = ['Unbroken on the first round', 'Grip gave out in round 2', 'PR 🎉', 'Felt smooth today', 'Paced it too hot early', null, null, null];
-    Object.keys(program).filter(d => d <= today).forEach(day => {
-      program[day].blocks.forEach(b => b.sections.forEach(sec => {
-        Object.values(profiles).filter(p => p.role === 'athlete').forEach(p => {
-          if (rand() > (day === today ? 0.7 : 0.85)) return;
-          const e = fakeEntry(sec.score, p, sec.title);
-          if (!e) return;
-          e.notes = NOTES[between(0, NOTES.length - 1)];
-          storeScore(p.id, day, sec, e);
-        });
-      }));
+    tracks.forEach(t => {
+      Object.keys(program[t.slug]).filter(d => d <= today).forEach(day => {
+        program[t.slug][day].blocks.forEach(b => b.sections.forEach(sec => {
+          Object.values(profiles).filter(p => p.role === 'athlete').forEach(p => {
+            // most members only do WOD; the HERD group is a smaller subset
+            const shows = t.slug === 'wod' ? 0.8 : 0.45;
+            if (rand() > shows * (day === today ? 1 : 0.85)) return;
+            const e = fakeEntry(sec.score, p, sec.title);
+            if (!e) return;
+            e.notes = NOTES[between(0, NOTES.length - 1)];
+            storeScore(p.id, day, sec, e, null, t.slug);
+          });
+        }));
+      });
     });
-    const todayFran = scores.filter(s => s.day === today && /fran/i.test(s.section_title));
+    const todayFran = scores.filter(s => s.day === today && /fran|cindy/i.test(s.section_title));
     todayFran.forEach(s => {
       Object.keys(profiles).forEach(pid => { if (pid !== s.user_id && rand() < 0.35) likes.push({ score_id: s.id, user_id: pid }); });
     });
@@ -129,7 +156,7 @@
     const NOT_ALLOWED = message => Promise.resolve({ data: null, error: { code: 'not_allowed', message } });
     const canSee = s => {
       if (s.user_id === userId || isCoach()) return true;
-      const sec = sectionOf(s.day, s.section_key);
+      const sec = sectionOf(s.day, s.section_key, s.track);
       return !!(sec && sec.leaderboard === 'on');
     };
     const dayIsPublic = day => settings.public_days_ahead === null || day <= addDays(today, settings.public_days_ahead);
@@ -164,31 +191,36 @@
       sendPasswordReset: () => ok({}),
       setNewPassword: () => ok({}),
 
-      getDay: day => ok(program[day] && (userId || dayIsPublic(day)) ? (() => {
-        const d = Object.assign({}, program[day]); delete d.warnings;
+      listTracks: () => ok(tracks.filter(t => shown.indexOf(t.slug) >= 0)
+        .map(t => ({ slug: t.slug, name: t.name, position: t.position, is_default: t.is_default }))),
+      setTrack: slug => { track = slug || 'herd'; },
+      getTrack: () => track,
+
+      getDay: day => ok(prog()[day] && (userId || dayIsPublic(day)) ? (() => {
+        const d = Object.assign({}, prog()[day]); delete d.warnings;
         d.coach_notes = isCoach() || settings.coach_notes_visibility === 'everyone' ? d.coach_notes : null;
         return d;
       })() : null),
-      getCalendar: (from, to) => ok(Object.values(program).filter(d => d.day >= from && d.day <= to && (userId || dayIsPublic(d.day)))
+      getCalendar: (from, to) => ok(Object.values(prog()).filter(d => d.day >= from && d.day <= to && (userId || dayIsPublic(d.day)))
         .map(d => ({ day: d.day, is_rest_day: d.is_rest_day, status: d.status, tab_name: d.tab_name })).sort((a, b) => a.day < b.day ? -1 : 1)),
       getSettings: () => ok(Object.assign({}, settings)),
       updateSettings: member(fields => {
         if (!isCoach()) return ok(null);
-        ['public_days_ahead', 'timezone', 'coach_notes_visibility'].forEach(k => { if (k in fields) settings[k] = fields[k]; });
+        ['public_window', 'public_days_ahead', 'timezone', 'coach_notes_visibility'].forEach(k => { if (k in fields) settings[k] = fields[k]; });
         return ok(Object.assign({}, settings));
       }),
-      getWarnings: member((from, to) => ok(Object.values(program).filter(d => d.day >= from && d.day <= to && d.warnings.length)
+      getWarnings: member((from, to) => ok(Object.values(prog()).filter(d => d.day >= from && d.day <= to && d.warnings.length)
         .map(d => ({ day: d.day, tab_name: d.tab_name, warnings: d.warnings })).sort((a, b) => a.day < b.day ? -1 : 1))),
 
       getMyDay: member(day => {
         const out = {};
-        scores.filter(s => s.user_id === me() && s.day === day).forEach(s => {
+        scores.filter(s => s.user_id === me() && s.track === track && s.day === day).forEach(s => {
           out[s.section_key] = Object.assign({}, s, { editor: s.edited_by ? { display_name: (profiles[s.edited_by] || {}).display_name } : null });
         });
-        return ok({ scores: out, feel: feels[me() + '|' + day] || null });
+        return ok({ scores: out, feel: feels[me() + '|' + track + '|' + day] || null });
       }),
       saveScore: member((day, section, entry, opts) => {
-        const real = sectionOf(day, section.key);
+        const real = sectionOf(day, section.key, track);
         if (!real || real.score.type === 'none') return fail('This section does not take scores');
         const target = (opts && opts.userId) || me();
         if (target !== me() && !isCoach()) return fail('new row violates row-level security policy for table "scores"');
@@ -196,7 +228,7 @@
         return Promise.resolve({ data: r.data || null, error: r.error || null });
       }),
       deleteScore: member((day, key) => {
-        const i = scores.findIndex(s => s.user_id === me() && s.day === day && s.section_key === key);
+        const i = scores.findIndex(s => s.user_id === me() && s.track === track && s.day === day && s.section_key === key);
         if (i >= 0) scores.splice(i, 1);
         return ok(null);
       }),
@@ -209,18 +241,18 @@
         for (let j = likes.length - 1; j >= 0; j--) if (likes[j].score_id === gone.id) likes.splice(j, 1);
         return ok([{ id }]);
       }),
-      setFeel: member((day, feel) => { feels[me() + '|' + day] = feel; return ok({ day, feel }); }),
+      setFeel: member((day, feel) => { feels[me() + '|' + track + '|' + day] = feel; return ok({ track, day, feel }); }),
       getHistory: member((q, limit) => ok(scores.filter(s => s.user_id === me() && (s.section_title || '').toLowerCase().includes(String(q).toLowerCase()))
         .sort((a, b) => a.day < b.day ? 1 : -1).slice(0, limit || 100))),
 
       getBoardSets: member((day, key) => {
         const out = {};
-        scores.filter(s => s.day === day && s.section_key === key && canSee(s)).forEach(s => { out[s.id] = s.sets.map(x => Object.assign({}, x)); });
+        scores.filter(s => s.track === track && s.day === day && s.section_key === key && canSee(s)).forEach(s => { out[s.id] = s.sets.map(x => Object.assign({}, x)); });
         return ok(out);
       }),
       getLeaderboard: member((day, key, o) => {
         o = o || {};
-        let rows = scores.filter(s => s.day === day && s.section_key === key && canSee(s) && (!o.level || s.level === o.level));
+        let rows = scores.filter(s => s.track === track && s.day === day && s.section_key === key && canSee(s) && (!o.level || s.level === o.level));
         if (o.division) rows = rows.filter(s => (profiles[s.user_id] || {}).division === o.division);
         const byLevel = {};
         rows.forEach(s => { (byLevel[s.level] = byLevel[s.level] || []).push(s); });
@@ -305,9 +337,9 @@
 
       exportDay: member(day => {
         const build = root.dayResultRows || (typeof require === 'function' ? require('./trainderive-api.js').dayResultRows : null);
-        const visible = scores.filter(s => s.day === day && canSee(s));
+        const visible = scores.filter(s => s.track === track && s.day === day && canSee(s));
         const lbRows = visible.map(s => { const pr = profiles[s.user_id] || {}; return { score_id: s.id, day: s.day, section_key: s.section_key, section_title: s.section_title, score_type: s.score_type, level: s.level, display_name: pr.display_name, division: pr.division, display: s.display }; });
-        const secs = program[day] ? program[day].blocks.flatMap(b => b.sections).map(x => ({ key: x.key, position: x.position, title: x.title })) : [];
+        const secs = prog()[day] ? prog()[day].blocks.flatMap(b => b.sections).map(x => ({ key: x.key, position: x.position, title: x.title })) : [];
         return ok(build(lbRows, visible.map(s => ({ id: s.id, sets: s.sets })), secs));
       }),
       exportRows: member((from, to, filter) => {
