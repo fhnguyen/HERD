@@ -21,12 +21,15 @@
   'use strict';
 
   // Columns visitors are allowed to read (keep in sync with the anon grant in supabase-schema.sql)
-  const DAY_COLUMNS = 'day, tab_name, status, daily_note, is_rest_day, day_lb, blocks, published_at';
+  const DAY_COLUMNS = 'track, day, tab_name, status, daily_note, is_rest_day, day_lb, blocks, published_at';
   const AUTH_REQUIRED = Object.freeze({ code: 'auth_required', message: 'Sign in to log results and see leaderboards' });
 
   function TrainDeriveApi(db, TD, opts) {
     opts = opts || {};
     let userId = opts.userId || null;
+    // Which program the app is showing. Tracks live in the `tracks` table; a single-program gym
+    // only has 'herd' and never needs to touch this.
+    let track = opts.track || 'herd';
     const me = () => userId;
     const wrap = async p => { try { const r = await p; return { data: r.data, error: r.error || null }; } catch (e) { return { data: null, error: e }; } };
     // Row security makes forbidden updates/deletes affect 0 rows instead of failing; report that clearly.
@@ -43,6 +46,13 @@
       // ── Session ──────────────────────────────────────────────────────
       setUserId: id => { userId = id || null; },
       isSignedIn: () => !!userId,
+
+      // ── Tracks ───────────────────────────────────────────────────────
+      /** Every program, in display order: [{ slug, name, position, is_default }] */
+      listTracks: () => wrap(db.from('tracks').select('slug, name, position, is_default').order('position').order('slug')),
+      /** Point every call below at one program. */
+      setTrack: slug => { track = slug || 'herd'; },
+      getTrack: () => track,
 
       /** Self-serve account. With "Confirm email" on, the user must click the emailed link before signing in. */
       /** captchaToken only if CAPTCHA protection is enabled in Supabase (hCaptcha / Turnstile widget result).
@@ -64,8 +74,8 @@
        *  Includes coach_notes when the viewer may see them (see coach_notes_visibility). */
       getDay: async day => {
         const [d, n] = await Promise.all([
-          wrap(db.from('program_days').select(DAY_COLUMNS).eq('day', day).maybeSingle()),
-          wrap(db.rpc('get_coach_notes', { p_day: day })),
+          wrap(db.from('program_days').select(DAY_COLUMNS).eq('track', track).eq('day', day).maybeSingle()),
+          wrap(db.rpc('get_coach_notes', { p_day: day, p_track: track })),
         ]);
         // coach_notes: { day?, A?, B?, … } — or null when the viewer isn't allowed to see them.
         // Notes are optional: a notes error never hides the day.
@@ -75,26 +85,26 @@
 
       /** Light list for a calendar/week strip. */
       getCalendar: (from, to) => wrap(db.from('program_days')
-        .select('day, is_rest_day, status, tab_name').gte('day', from).lte('day', to).order('day')),
+        .select('day, is_rest_day, status, tab_name').eq('track', track).gte('day', from).lte('day', to).order('day')),
 
-      /** { public_days_ahead, timezone, coach_notes_visibility: 'everyone' | 'coaches' } */
-      getSettings: () => wrap(db.from('app_settings').select('public_days_ahead, timezone, coach_notes_visibility').maybeSingle()),
+      /** { public_window: 'all' | 'week' | 'days', public_days_ahead, timezone, coach_notes_visibility } */
+      getSettings: () => wrap(db.from('app_settings').select('public_window, public_days_ahead, timezone, coach_notes_visibility').maybeSingle()),
       /** Coaches only (the database rejects everyone else). */
       updateSettings: member(fields => {
-        const allowed = {}; ['public_days_ahead', 'timezone', 'coach_notes_visibility'].forEach(k => { if (k in fields) allowed[k] = fields[k]; });
-        return wrap(db.from('app_settings').update(allowed).eq('id', true).select('public_days_ahead, timezone, coach_notes_visibility').maybeSingle());
+        const allowed = {}; ['public_window', 'public_days_ahead', 'timezone', 'coach_notes_visibility'].forEach(k => { if (k in fields) allowed[k] = fields[k]; });
+        return wrap(db.from('app_settings').update(allowed).eq('id', true).select('public_window, public_days_ahead, timezone, coach_notes_visibility').maybeSingle());
       }),
 
       /** Parser warnings for coaches ("B: Ignored 'wobble'"). */
       getWarnings: member((from, to) => wrap(db.from('program_days')
-        .select('day, tab_name, warnings').gte('day', from).lte('day', to).neq('warnings', '[]').order('day'))),
+        .select('day, tab_name, warnings').eq('track', track).gte('day', from).lte('day', to).neq('warnings', '[]').order('day'))),
 
       // ── My results ───────────────────────────────────────────────────
       /** My scores + feel for one day → { scores: {A: row, …}, feel } */
       getMyDay: member(async function (day) {
         const [s, f] = await Promise.all([
-          wrap(db.from('scores').select('*, editor:profiles!edited_by(display_name)').eq('user_id', me()).eq('day', day)),
-          wrap(db.from('day_logs').select('feel').eq('user_id', me()).eq('day', day).maybeSingle()),
+          wrap(db.from('scores').select('*, editor:profiles!edited_by(display_name)').eq('user_id', me()).eq('track', track).eq('day', day)),
+          wrap(db.from('day_logs').select('feel').eq('user_id', me()).eq('track', track).eq('day', day).maybeSingle()),
         ]);
         if (s.error || f.error) return { data: null, error: s.error || f.error };
         const scores = {}; (s.data || []).forEach(r => { scores[r.section_key] = r; });
@@ -111,16 +121,16 @@
         const r = TD.computeScore(section.score, entry);
         if (!r.ok) return { data: null, error: { message: r.errors.join(' · '), validation: r.errors } };
         return wrap(db.from('scores').upsert({
-          user_id: (opts && opts.userId) || me(), day, section_key: section.key, section_title: section.title,
+          user_id: (opts && opts.userId) || me(), track, day, section_key: section.key, section_title: section.title,
           score_type: r.type, score_spec: TD.normalizeSpec(section.score),
           level: r.level, sets: r.sets, value: r.value, rank_value: r.rankValue,
           display: r.display, is_capped: r.capped,
           notes: entry.notes ? String(entry.notes).slice(0, 2000) : null,
-        }, { onConflict: 'user_id,day,section_key' }).select().single());
+        }, { onConflict: 'user_id,track,day,section_key' }).select().single());
       }),
 
       deleteScore: member((day, sectionKey) => wrap(db.from('scores').delete()
-        .eq('user_id', me()).eq('day', day).eq('section_key', sectionKey))),
+        .eq('user_id', me()).eq('track', track).eq('day', day).eq('section_key', sectionKey))),
 
       /** One full result by id (coaches use this to prefill the editor for someone else's result). */
       getScore: member(id => wrap(db.from('scores').select('*').eq('id', id).maybeSingle())),
@@ -129,11 +139,13 @@
       deleteScoreById: member(id => denied(db.from('scores').delete().eq('id', id).select('id'), 'Only coaches can delete other people’s results')),
 
       setFeel: member((day, feel) => wrap(db.from('day_logs')
-        .upsert({ user_id: me(), day, feel }, { onConflict: 'user_id,day' }).select().single())),
+        .upsert({ user_id: me(), track, day, feel }, { onConflict: 'user_id,track,day' }).select().single())),
 
       /** My history for a movement, e.g. every "Back Squat" I've logged (for PRs / progress charts). */
-      getHistory: member((titleContains, limit) => wrap(db.from('scores')
-        .select('day, section_title, score_type, level, display, value, sets')
+      /** Across every track by default; pass { track: api.getTrack() } for just the one on screen. */
+      getHistory: member((titleContains, limit, o) => wrap((o && o.track
+        ? db.from('scores').select('track, day, section_title, score_type, level, display, value, sets').eq('track', o.track)
+        : db.from('scores').select('track, day, section_title, score_type, level, display, value, sets'))
         .eq('user_id', me()).ilike('section_title', '%' + titleContains + '%')
         .order('day', { ascending: false }).limit(limit || 100))),
 
@@ -141,7 +153,7 @@
       /** Ranked rows for a section. level: 'rx' | 'scaled'. division filter re-ranks client-side. */
       /** Individual sets for every result on a board you can see: { scoreId: [set, …] }. Same visibility rules as the leaderboard. */
       getBoardSets: member(async function (day, sectionKey) {
-        const r = await wrap(db.from('scores').select('id, sets').eq('day', day).eq('section_key', sectionKey));
+        const r = await wrap(db.from('scores').select('id, sets').eq('track', track).eq('day', day).eq('section_key', sectionKey));
         if (r.error) return r;
         const out = {}; (r.data || []).forEach(x => { out[x.id] = x.sets || []; });
         return { data: out, error: null };
@@ -149,7 +161,7 @@
 
       getLeaderboard: member(async function (day, sectionKey, o) {
         o = o || {};
-        let q = db.from('leaderboard').select('*').eq('day', day).eq('section_key', sectionKey);
+        let q = db.from('leaderboard').select('*').eq('track', track).eq('day', day).eq('section_key', sectionKey);
         if (o.level) q = q.eq('level', o.level);
         const res = await wrap(q.order('place', { ascending: true, nullsFirst: false }).order('created_at'));
         if (res.error || !o.division) return res;
@@ -204,9 +216,9 @@
        *  Row: { day, section_key, workout, athlete, gender, result, level }. Coaches get everyone; others only what they can see. */
       exportDay: member(async function (day) {
         const [lb, sets, secs] = await Promise.all([
-          wrap(db.from('leaderboard').select('score_id, day, section_key, section_title, score_type, level, display_name, division, display').eq('day', day)),
-          wrap(db.from('scores').select('id, sets').eq('day', day)),
-          wrap(db.from('program_sections').select('key, position, title').eq('day', day)),
+          wrap(db.from('leaderboard').select('score_id, day, section_key, section_title, score_type, level, display_name, division, display').eq('track', track).eq('day', day)),
+          wrap(db.from('scores').select('id, sets').eq('track', track).eq('day', day)),
+          wrap(db.from('program_sections').select('key, position, title').eq('track', track).eq('day', day)),
         ]);
         if (lb.error) return lb;
         return { data: dayResultRows(lb.data || [], sets.data || [], secs.data || []), error: null };
@@ -216,7 +228,7 @@
         filter = filter || {};
         const rows = [];
         for (let offset = 0; ; offset += 1000) {
-          let q = db.from('score_export').select('*').gte('day', from).lte('day', to);
+          let q = db.from('score_export').select('*').eq('track', track).gte('day', from).lte('day', to);
           if (filter.scoreType) q = q.eq('score_type', filter.scoreType);
           if (filter.titleContains) q = q.ilike('section_title', '%' + filter.titleContains + '%');
           if (filter.userId) q = q.eq('user_id', filter.userId);
