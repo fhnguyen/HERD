@@ -122,6 +122,16 @@ button { cursor: pointer; background: none; border: 0; }
 .me-init { width: 34px; height: 34px; border-radius: 2px; background: var(--blue); color: #fff; font-family: var(--display); font-size: 19px; display: grid; place-items: center; letter-spacing: 0.5px; }
 .me-btn[data-role="coach"] .me-init { background: var(--gold); color: var(--ink); }
 
+.track-bar { background: var(--paper); border-bottom: 1px solid var(--line); padding: 10px 18px; display: flex; justify-content: center; }
+.track-sel {
+  appearance: none; -webkit-appearance: none;
+  font-family: var(--display); font-size: 22px; letter-spacing: 1.5px; line-height: 1;
+  color: var(--ink); background: var(--paper); border: 2px solid var(--blue); border-radius: 3px;
+  padding: 9px 42px 7px 16px; min-width: 200px; text-align: center; text-align-last: center; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--blue) 50%), linear-gradient(135deg, var(--blue) 50%, transparent 50%);
+  background-position: calc(100% - 20px) 55%, calc(100% - 13px) 55%; background-size: 7px 7px, 7px 7px; background-repeat: no-repeat;
+}
+.track-sel:hover { background-color: var(--blue-soft); }
 .demo-bar { background: var(--ink); color: rgba(255,255,255,0.8); font-size: 12.5px; line-height: 1.5; padding: 10px 18px; }
 @media (min-width: 700px) { .demo-bar { padding: 10px 28px; } }
 .demo-bar b { color: var(--gold-lt); font-weight: 700; }
@@ -477,6 +487,10 @@ dialog.sheet::backdrop { background: rgba(20,22,28,0.5); backdrop-filter: blur(2
   </div>
 </nav>
 <div class="grad-rule"></div>
+<div class="track-bar" id="track-bar" hidden>
+  <label class="sr-only" for="track-sel">Program</label>
+  <select class="track-sel" id="track-sel"></select>
+</div>
 <div class="demo-bar" id="demo-bar" hidden></div>
 
 <main>
@@ -646,7 +660,7 @@ function toast(msg, kind) { const t = $('#toast'); t.textContent = msg; t.datase
 const S = {
   api: null, db: null, day: todayISO(), dayData: null, cal: [], my: { scores: {}, feel: null },
   profile: null, settings: {}, editing: {}, drafts: {}, pendingKey: null, justLogged: null, loadSeq: 0,
-  board: null, notesOpen: {}, collapsed: {},
+  board: null, notesOpen: {}, collapsed: {}, track: null, tracks: [],
 };
 const signedIn = () => S.api && S.api.isSignedIn();
 const isCoach = () => !!(S.profile && S.profile.role === 'coach');
@@ -678,12 +692,21 @@ async function boot() {
       setTimeout(() => onAuthChange(event, session), 0); // supabase-js: don't await other calls inside the callback
     });
   } else {
-    S.api = TrainDeriveDemo(TD);
+    S.api = TrainDeriveDemo(TD, /\bwod\b/.test(location.search) ? { tracks: ['herd', 'wod'] } : undefined);
     S.api.onAuthChange(onAuthChange);
     const bar = $('#demo-bar');
     bar.innerHTML = '<div class="col"><b>Demo data.</b> ' + (location.protocol === 'file:' || /herd-westwood-preview/.test(location.pathname) ? '' : 'Not connected to Supabase: SUPABASE_URL or SUPABASE_KEY is blank in index.html. ') + 'Sign in with any email to log scores. Use an email containing “coach” to see coach tools.</div>';
     bar.hidden = false;
   }
+
+  const tr = await S.api.listTracks();
+  S.tracks = (tr.data || []).slice().sort((a, b) => (a.position - b.position) || String(a.slug).localeCompare(String(b.slug)));
+  let remembered = null; try { remembered = localStorage.getItem('herd-track'); } catch (e) {}
+  const fromHash = location.hash.replace('#', '').split('/').filter(Boolean).find(x => !/^\d{4}-\d{2}-\d{2}$/.test(x));
+  const wanted = [fromHash, remembered, defaultTrack()].find(x => x && S.tracks.some(t => t.slug === x)) || defaultTrack();
+  S.track = wanted;
+  S.api.setTrack(wanted);
+  renderTrackBar();
 
   const set = await S.api.getSettings();
   S.settings = set.data || {};
@@ -716,16 +739,46 @@ async function refreshProfile() {
   }
 }
 
+/* Links look like #2026-09-18 (default track) or #wod/2026-09-18 */
 function route() {
-  const h = location.hash.replace('#', '');
-  loadDay(/^\d{4}-\d{2}-\d{2}$/.test(h) ? h : todayISO());
+  const parts = location.hash.replace('#', '').split('/').filter(Boolean);
+  const day = parts.find(x => /^\d{4}-\d{2}-\d{2}$/.test(x)) || todayISO();
+  const slug = parts.find(x => !/^\d{4}-\d{2}-\d{2}$/.test(x));
+  if (slug && slug !== S.track && S.tracks.some(t => t.slug === slug)) setTrack(slug, { silent: true });
+  loadDay(day);
+}
+
+function trackHash(day, slug) {
+  const t = slug || S.track;
+  return '#' + (t && t !== defaultTrack() ? t + '/' : '') + day;
+}
+const defaultTrack = () => { const d = S.tracks.find(t => t.is_default) || S.tracks[0]; return d ? d.slug : 'herd'; };
+
+function setTrack(slug, o) {
+  o = o || {};
+  S.track = slug;
+  S.api.setTrack(slug);
+  try { localStorage.setItem('herd-track', slug); } catch (e) {}
+  const sel = $('#track-sel'); if (sel && sel.value !== slug) sel.value = slug;
+  if (o.silent) return;
+  location.hash = trackHash(S.day || todayISO(), slug);
+  route();
+}
+
+function renderTrackBar() {
+  const bar = $('#track-bar'), sel = $('#track-sel');
+  if (!S.tracks.length) { bar.hidden = true; return; }
+  sel.innerHTML = S.tracks.map(t => '<option value="' + esc(t.slug) + '"' + (t.slug === S.track ? ' selected' : '') + '>' + esc(t.name) + '</option>').join('');
+  sel.setAttribute('aria-label', 'Program: ' + (S.tracks.find(t => t.slug === S.track) || {}).name);
+  sel.onchange = () => { S.editing = {}; S.drafts = {}; setTrack(sel.value); };
+  bar.hidden = false;
 }
 
 function bindStatic() {
-  $('#wk-prev').onclick = () => { location.hash = addDays(S.day, -7); };
-  $('#wk-next').onclick = () => { location.hash = addDays(S.day, 7); };
-  $('#wk-today').onclick = () => { location.hash = todayISO(); };
-  $('#brand').onclick = e => { e.preventDefault(); location.hash = todayISO(); };
+  $('#wk-prev').onclick = () => { location.hash = trackHash(addDays(S.day, -7)); };
+  $('#wk-next').onclick = () => { location.hash = trackHash(addDays(S.day, 7)); };
+  $('#wk-today').onclick = () => { location.hash = trackHash(todayISO()); };
+  $('#brand').onclick = e => { e.preventDefault(); location.hash = trackHash(todayISO()); };
   document.querySelectorAll('dialog [data-close]').forEach(b => { b.onclick = () => b.closest('dialog').close(); });
   document.querySelectorAll('dialog.sheet').forEach(d => d.addEventListener('click', e => { if (e.target === d) d.close(); }));
   ['#day-body', '#dlg-edit'].forEach(sel => { $(sel).addEventListener('click', onEntryClick); $(sel).addEventListener('keydown', onEntryKey); });
@@ -796,9 +849,17 @@ async function loadDay(iso, keepDrafts) {
   }
 }
 
+// Mirrors day_is_public() in the database, so visitors get "sign in to see this day" rather than "nothing posted"
 function lockedForVisitor(iso) {
+  if (signedIn()) return false;
+  const mode = S.settings.public_window || 'all';
+  if (mode === 'all') return false;
+  if (mode === 'week') {
+    const t = dateOf(todayISO()); t.setDate(t.getDate() + (7 - ((t.getDay() + 6) % 7 + 1)));   // Sunday of this week
+    return iso > isoOf(t);
+  }
   const n = S.settings.public_days_ahead;
-  return !signedIn() && n !== null && n !== undefined && iso > addDays(todayISO(), n);
+  return iso > addDays(todayISO(), n === null || n === undefined ? 0 : n);
 }
 
 function renderTitle() {
@@ -831,7 +892,7 @@ function renderWeek() {
     return '<button class="wk" data-day="' + iso + '"' + attrs + ' aria-label="' + esc(label) + '">' +
       '<span class="wk-dow">' + esc(fmt(iso, { weekday: 'short' })) + '</span><span class="wk-num">' + dateOf(iso).getDate() + '</span></button>';
   }).join('');
-  document.querySelectorAll('#week .wk').forEach(btn => { btn.onclick = () => { location.hash = btn.dataset.day; }; });
+  document.querySelectorAll('#week .wk').forEach(btn => { btn.onclick = () => { location.hash = trackHash(btn.dataset.day); }; });
 }
 
 function renderBody() {
@@ -851,7 +912,7 @@ function renderBody() {
   let html = '';
   if (d.status === 'wip') html += '<div class="note note--wip"><b>Your coach is still writing this day.</b> You can train and log scores, but sections may change.</div>';
   if (d.daily_note) html += '<div class="note">' + richText(esc(d.daily_note)) + '</div>';
-  if (d.coach_notes && d.coach_notes.day) html += '<div class="day-notes">' + notesHTML(S.day + '-day', d.coach_notes.day, 'Coach’s notes for today') + '</div>';
+  if (d.coach_notes && d.coach_notes.day) html += '<div class="day-notes">' + notesHTML(S.track + '|' + S.day + '-day', d.coach_notes.day, 'Coach’s notes for today') + '</div>';
 
   const secs = allSections(), scored = secs.filter(s => s.score.type !== 'none');
   if (signedIn() && scored.length) {
@@ -932,7 +993,7 @@ function cardSummary(sec, row) {
 function toggleCard(btn) {
   const card = btn.closest('.card'); if (!card) return;
   const collapse = btn.getAttribute('aria-expanded') === 'true';
-  S.collapsed[S.day + '-' + card.dataset.key] = collapse;
+  S.collapsed[S.track + '|' + S.day + '-' + card.dataset.key] = collapse;
   if (collapse) card.querySelectorAll('.video-btn[aria-expanded="true"]').forEach(toggleVideo);   // don't leave a hidden video playing
   card.toggleAttribute('data-collapsed', collapse);
   btn.setAttribute('aria-expanded', String(!collapse));
@@ -957,15 +1018,15 @@ function cardHTML(sec, i) {
       (boardVisible(sec) ? '<button class="text-btn" data-act="board">Leaderboard</button>' : '') + '</div></div>';
   }
 
-  const collapsed = !!S.collapsed[S.day + '-' + sec.key];
-  const bodyId = 'cb-' + S.day + '-' + sec.key;
+  const collapsed = !!S.collapsed[S.track + '|' + S.day + '-' + sec.key];
+  const bodyId = 'cb-' + S.track + '-' + S.day + '-' + sec.key;
   return '<article class="card" data-key="' + esc(sec.key) + '" data-slot="' + esc(slot.id) + '" data-state="' + state + '"' + (collapsed ? ' data-collapsed' : '') + ' style="--accent:' + ACCENTS[i % 4][0] + ';--accent-ink:' + ACCENTS[i % 4][1] + '">' +
     '<div class="card-hd"><h3 class="card-h"><button type="button" class="card-toggle" data-act="collapse" aria-expanded="' + !collapsed + '" aria-controls="' + esc(bodyId) + '">' +
       '<span class="card-key">' + esc(sec.key) + '</span><span class="card-title">' + esc(sec.title || 'Section ' + sec.key) + '</span>' +
       '<span class="card-sum">' + esc(cardSummary(sec, row)) + '</span><span class="card-chev" aria-hidden="true"></span></button></h3></div>' +
     '<div class="card-body" id="' + esc(bodyId) + '"' + (collapsed ? ' hidden' : '') + '>' +
       (body ? '<div class="card-text">' + richText(esc(body)) + '</div>' : '<div style="height:18px"></div>') +
-      (S.dayData && S.dayData.coach_notes && S.dayData.coach_notes[sec.key] ? '<div class="card-notes">' + notesHTML(S.day + '-' + sec.key, S.dayData.coach_notes[sec.key], 'Coach’s notes') + '</div>' : '') +
+      (S.dayData && S.dayData.coach_notes && S.dayData.coach_notes[sec.key] ? '<div class="card-notes">' + notesHTML(S.track + '|' + S.day + '-' + sec.key, S.dayData.coach_notes[sec.key], 'Coach’s notes') + '</div>' : '') +
       panel + '</div></article>';
 }
 
@@ -1217,7 +1278,7 @@ async function onEntryClick(e) {
 
   switch (act) {
     case 'retry': return loadDay(S.day);
-    case 'today': location.hash = todayISO(); return;
+    case 'today': location.hash = trackHash(todayISO()); return;
     case 'video': return toggleVideo(t);
     case 'collapse': return toggleCard(t);
     case 'notes': {
@@ -1652,15 +1713,15 @@ function renderProfile() {
       '<ul class="people" id="people-list"><li class="empty">Loading</li></ul></section>';
   }
   if (isCoach()) {
-    const pda = S.settings.public_days_ahead;
-    const opts = [[null, 'Everything'], [0, 'Today'], [1, '+1 day'], [7, '+7 days']];
+    const window_ = S.settings.public_window || 'all';
     h += '<section class="sheet-section"><h3>Export results</h3><p>Everyone’s results for one day: workout, athlete, gender, result, and RX/Scaled. The Excel file has an “All results” tab plus a tab for each workout.</p>' +
       '<label class="field"><span>Day</span><input class="input" type="date" id="ex-day" value="' + esc(S.day) + '" max="' + esc(addDays(todayISO(), 365)) + '"></label>' +
       '<div class="entry-acts"><button class="btn-primary btn-sm" data-export="xlsx" type="button">Download Excel</button><button class="btn-ghost btn-sm" data-export="csv" type="button">Download CSV</button></div>' +
       '<p class="err" id="ex-err" role="alert"></p></section>' +
-      '<section class="sheet-section"><h3>What visitors can see</h3><p>How far ahead people without an account can see programming. Members always see everything that’s published.</p>' +
+      '<section class="sheet-section"><h3>What visitors can see</h3><p>How far ahead people without an account can see programming, in every program. Members always see everything that’s published.</p>' +
       '<div class="seg seg--sm" role="group" aria-label="Visitor look-ahead" style="margin-top:12px;flex-wrap:wrap">' +
-      opts.map(([v, l]) => '<button type="button" data-pda="' + (v === null ? 'null' : v) + '" aria-pressed="' + (pda === v || (v === null && (pda === null || pda === undefined))) + '">' + l + '</button>').join('') + '</div></section>' +
+      [['all', 'Everything'], ['week', 'This week'], ['days', 'Next 7 days']].map(([v, l]) =>
+        '<button type="button" data-pubwin="' + v + '" aria-pressed="' + (window_ === v) + '">' + l + '</button>').join('') + '</div></section>' +
       '<section class="sheet-section"><h3>Coach’s notes</h3><p>Lines starting with * in the sheet. Choose who can open them.</p>' +
       '<div class="seg seg--sm" role="group" aria-label="Who can see coach’s notes" style="margin-top:12px">' +
       [['everyone', 'Everyone'], ['coaches', 'Coaches only']].map(([v, l]) => '<button type="button" data-cnv="' + v + '" aria-pressed="' + ((S.settings.coach_notes_visibility || 'everyone') === v) + '">' + l + '</button>').join('') + '</div></section>' +
@@ -1688,10 +1749,10 @@ function renderProfile() {
       loadDay(S.day, true);
     };
   });
-  $('#profile-bd').querySelectorAll('[data-pda]').forEach(b => {
+  $('#profile-bd').querySelectorAll('[data-pubwin]').forEach(b => {
     b.onclick = async () => {
-      const v = b.dataset.pda === 'null' ? null : Number(b.dataset.pda);
-      const r = await S.api.updateSettings({ public_days_ahead: v });
+      const v = b.dataset.pubwin;
+      const r = await S.api.updateSettings(v === 'days' ? { public_window: 'days', public_days_ahead: 7 } : { public_window: v });
       if (r.error || !r.data) return toast('Couldn’t change that setting');
       S.settings = r.data;
       b.parentElement.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
