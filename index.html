@@ -363,6 +363,73 @@ dialog.sheet::backdrop { background: rgba(20,22,28,0.5); backdrop-filter: blur(2
   .sheet-bd { padding-bottom: calc(26px + env(safe-area-inset-bottom)); }
 }
 
+/* Daily results (coach): one table per workout, stacked in a scrolling sheet */
+dialog.sheet--wide { width: min(960px, calc(100% - 32px)); max-height: min(92dvh, 940px); }
+.rt-tools {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px; flex-shrink: 0;
+  padding: 12px 22px; border-bottom: 1px solid var(--line); background: var(--paper);
+}
+.rt-tools .input { flex: 1 1 190px; min-width: 150px; width: auto; }
+.rt-count { flex-basis: 100%; font-size: 12px; color: var(--ink-2); margin: 0; }
+.rt-count b { color: var(--ink); }
+
+.rt-grp { margin-top: 22px; }
+.rt-grp:first-child { margin-top: 2px; }
+.rt-grp-hd { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 7px; }
+.rt-grp-key {
+  font-size: 10px; font-weight: 800; letter-spacing: 1.6px; color: var(--blue);
+  background: var(--blue-soft); border: 1px solid rgba(0,68,223,0.2); border-radius: 3px; padding: 3px 7px;
+}
+.rt-grp-t { font-family: var(--display); font-weight: 400; font-size: 25px; line-height: 1; color: var(--ink); }
+.rt-grp-n { font-size: 11.5px; color: var(--ink-3); margin-left: auto; white-space: nowrap; }
+/* Left visible on wide screens on purpose: an overflow wrapper would become the scroll
+   container and the sticky column headers below would have nothing to stick to. */
+.rt-wrap { border: 1px solid var(--line); border-radius: 4px; background: var(--paper); overflow: visible; }
+table.rt { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13.5px; }
+table.rt th, table.rt td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.rt thead th {
+  position: sticky; top: 0; z-index: 2; background: var(--wash); white-space: nowrap;
+  font-size: 9px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; color: var(--ink-3);
+  border-bottom: 1px solid var(--line); padding: 0;
+}
+table.rt thead th:first-child { border-top-left-radius: 4px; }
+table.rt thead th:last-child  { border-top-right-radius: 4px; }
+table.rt thead th button {
+  width: 100%; display: flex; align-items: center; gap: 5px; padding: 10px 12px;
+  font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; background: none; text-align: left;
+}
+table.rt thead th button:hover { color: var(--ink); background: rgba(0,68,223,0.06); }
+table.rt thead th[aria-sort] button { color: var(--blue); }
+.rt-caret { font-size: 8px; line-height: 1; opacity: 0; }
+table.rt thead th[aria-sort] .rt-caret { opacity: 1; }
+table.rt tbody tr:last-child td { border-bottom: 0; }
+table.rt tbody tr:hover td { background: rgba(0,68,223,0.035); }
+.rt-name { font-weight: 700; color: var(--ink); white-space: nowrap; }
+.rt-sex { color: var(--ink-2); white-space: nowrap; }
+.rt-res { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rt-res .rt-lvl { display: block; font-size: 9px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase; color: var(--ink-3); }
+.rt-res .rt-lvl[data-v="Scaled"] { color: var(--orange-ink); }
+.rt-notes { color: var(--ink-2); line-height: 1.5; min-width: 180px; white-space: pre-line; overflow-wrap: anywhere; }
+.rt-none { color: var(--ink-3); }
+@media (max-width: 760px) {
+  .rt-tools { padding: 10px 16px; }
+  /* trimmed just enough that the group filter and Download share one row on a phone */
+  .rt-tools .seg--sm button { padding: 8px 10px; }
+  .rt-tools .btn-ghost.btn-sm { padding: 9px 11px; }
+  .rt-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+  table.rt { font-size: 13px; min-width: 460px; }   /* scroll sideways rather than crushing the columns */
+  table.rt th, table.rt td { padding: 8px 10px; }
+  table.rt thead th button { padding: 9px 10px; }
+  .rt-grp-t { font-size: 22px; }
+  .rt-notes { min-width: 150px; }
+  /* keep the name in view while swiping across to the result */
+  table.rt thead th:first-child, table.rt tbody td:first-child {
+    position: sticky; left: 0; z-index: 1; background: var(--paper); box-shadow: 1px 0 0 var(--line);
+  }
+  table.rt thead th:first-child { z-index: 3; background: var(--wash); }
+  table.rt tbody tr:hover td:first-child { background: #F4F7FF; }
+}
+
 /* Leaderboard */
 .board-controls { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; margin-bottom: 12px; }
 .board-note { font-size: 13px; line-height: 1.55; color: var(--ink-2); background: var(--wash); border-left: 4px solid var(--gold); padding: 10px 14px; border-radius: 0 3px 3px 0; margin-bottom: 12px; }
@@ -522,6 +589,16 @@ dialog.sheet::backdrop { background: rgba(20,22,28,0.5); backdrop-filter: blur(2
   <div class="sheet-bd" id="board-bd"></div>
 </dialog>
 
+<dialog class="sheet sheet--wide" id="dlg-results" aria-labelledby="results-title">
+  <div class="sheet-hd">
+    <span class="sheet-sub" id="results-sub"></span>
+    <h2 class="sheet-title" id="results-title">Daily results</h2>
+    <button class="sheet-x" data-close aria-label="Close">×</button>
+  </div>
+  <div class="rt-tools" id="results-tools" hidden></div>
+  <div class="sheet-bd" id="results-bd"></div>
+</dialog>
+
 <dialog class="sheet" id="dlg-edit" aria-labelledby="edit-title">
   <div class="sheet-hd">
     <span class="sheet-sub" id="edit-sub"></span>
@@ -660,7 +737,7 @@ function toast(msg, kind) { const t = $('#toast'); t.textContent = msg; t.datase
 const S = {
   api: null, db: null, day: todayISO(), dayData: null, cal: [], my: { scores: {}, feel: null },
   profile: null, settings: {}, editing: {}, drafts: {}, pendingKey: null, justLogged: null, loadSeq: 0,
-  board: null, notesOpen: {}, collapsed: {}, track: null, tracks: [],
+  board: null, results: null, notesOpen: {}, collapsed: {}, track: null, tracks: [],
 };
 const signedIn = () => S.api && S.api.isSignedIn();
 const isCoach = () => !!(S.profile && S.profile.role === 'coach');
@@ -791,6 +868,9 @@ function bindStatic() {
   $('#dlg-board').addEventListener('click', onBoardClick);
   $('#dlg-board').addEventListener('submit', onBoardSubmit);
   $('#dlg-board').addEventListener('close', () => { S.board = null; });
+  $('#dlg-results').addEventListener('click', onResultsClick);
+  $('#dlg-results').addEventListener('input', e => { if (e.target.id === 'rt-q' && S.results) { S.results.q = e.target.value; renderResults(); } });
+  $('#dlg-results').addEventListener('close', () => { S.results = null; });
 }
 
 /* ── Nav ─────────────────────────────────────────────── */
@@ -811,6 +891,7 @@ function renderNav() {
 async function loadDay(iso, keepDrafts) {
   const seq = ++S.loadSeq;
   if (iso !== S.day || !keepDrafts) { S.editing = {}; S.drafts = {}; }
+  if (S.results && S.results.day !== iso) $('#dlg-results').close();   // it's a table of one day; don't leave a stale one open
   S.day = iso;
   S.loading = true;
   renderWeek();
@@ -915,6 +996,7 @@ function renderBody() {
   if (d.status === 'wip') html += '<div class="note note--wip"><b>Your coach is still writing this day.</b> You can train and log scores, but sections may change.</div>';
   if (d.daily_note) html += '<div class="note">' + richText(esc(d.daily_note)) + '</div>';
   if (d.coach_notes && d.coach_notes.day) html += '<div class="day-notes">' + notesHTML(S.track + '|' + S.day + '-day', d.coach_notes.day, 'Coach’s notes for today') + '</div>';
+  if (isCoach()) html += '<div class="coach-bar"><span>Coach</span><button class="text-btn" data-act="results" type="button">View daily results</button></div>';
 
   const secs = allSections(), scored = secs.filter(s => s.score.type !== 'none');
   if (signedIn() && scored.length) {
@@ -1292,6 +1374,7 @@ async function onEntryClick(e) {
       if (t.dataset.board && slot) { S.pendingBoard = { key: slot.key, at: Date.now() }; return openAuth(t.dataset.mode || 'signin'); }
       return openAuth(t.dataset.mode || 'signin', slot && slot.key);
     case 'board': return slot && openBoard(slot.sec());
+    case 'results': return openResults();
     case 'feel': {
       const v = Number(t.dataset.v), prev = S.my.feel;
       S.my.feel = v;
@@ -1409,6 +1492,169 @@ function afterCoachChange(userId, key, row) {
     rerenderCard(key); refreshProgress();
   }
   if (S.board && S.board.sec.key === key) loadBoard();
+}
+
+/* ── Daily results (coaches) ──────────────────────────
+   One scrollable table of everything logged on the open day: athlete, group, workout,
+   result and the notes they left. Sort by any column, search any text, filter the group. */
+// One table per workout, so the workout itself isn't a column.
+const RT_COLS = [
+  { k: 'athlete', label: 'Athlete' },
+  { k: 'gender',  label: 'M/F' },
+  { k: 'result',  label: 'Result' },
+  { k: 'notes',   label: 'Notes' },
+];
+
+function openResults() {
+  S.results = { day: S.day, rows: [], loaded: false, sort: 'athlete', dir: 1, q: '', sex: '' };
+  $('#results-sub').textContent = fmt(S.day, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+  $('#results-tools').hidden = true; $('#results-tools').innerHTML = '';
+  $('#results-bd').innerHTML = '<div class="loading">Loading</div>';
+  $('#dlg-results').showModal();
+  loadResults();
+}
+
+async function loadResults() {
+  const r0 = S.results; if (!r0) return;
+  const r = await S.api.exportDay(r0.day);
+  if (S.results !== r0 || !$('#dlg-results').open) return;        // day changed or sheet closed while loading
+  if (r.error) {
+    $('#results-bd').innerHTML = '<p class="empty">The results didn’t load. ' + esc(r.error.message || '') +
+      ' <button class="text-btn" data-ract="retry" type="button">Try again</button></p>';
+    return;
+  }
+  r0.rows = r.data || []; r0.loaded = true;
+  renderResults();
+}
+
+/** Times (3:21, 1:02:30) and loads (225, 7.5 mi) sort by their number; anything else falls to the end. */
+function rtResultKey(v) {
+  const s = String(v == null ? '' : v).trim();
+  const t = s.match(/^(\d{1,2}):([0-5]\d)(?::([0-5]\d))?\b/);
+  if (t) return t[3] ? (+t[1] * 3600 + +t[2] * 60 + +t[3]) : (+t[1] * 60 + +t[2]);
+  const n = s.match(/-?\d+(?:\.\d+)?/);
+  return n ? parseFloat(n[0]) : Infinity;
+}
+
+/** The filtered rows, split into one group per workout, each sorted on its own.
+ *  Groups stay in program order; the API already returns them that way. */
+function rtGroups() {
+  const r = S.results, q = r.q.trim().toLowerCase();
+  const rows = r.rows.filter(x =>
+    (!r.sex || x.gender === r.sex) &&
+    (!q || (x.athlete + ' ' + x.workout + ' ' + x.result + ' ' + (x.notes || '')).toLowerCase().indexOf(q) >= 0));
+
+  const groups = [], byKey = {};
+  rows.forEach(x => {
+    const k = x.section_key + '|' + x.workout;
+    if (!byKey[k]) { byKey[k] = { key: x.section_key, title: x.title || x.workout, type: x.score_type, rows: [] }; groups.push(byKey[k]); }
+    byKey[k].rows.push(x);
+  });
+
+  const txt = (a, b) => String(a || '').localeCompare(String(b || ''), undefined, { sensitivity: 'base', numeric: true });
+  const hasNotes = x => (String(x.notes || '').trim() ? 1 : 0);
+  groups.forEach(g => {
+    const ord = new Map(); g.rows.forEach((x, i) => ord.set(x, i));
+    // "Best first" depends on the workout: fastest time, but heaviest load. The score type knows which.
+    const best = (TD.TYPES[g.type] && TD.TYPES[g.type].sort === 'desc') ? -1 : 1;
+    const primary = {
+      athlete: (a, b) => txt(a.athlete, b.athlete),
+      gender:  (a, b) => txt(a.gender, b.gender),
+      result:  (a, b) => ((rtResultKey(a.result) - rtResultKey(b.result)) * best) || txt(a.result, b.result),
+      notes:   (a, b) => (hasNotes(b) - hasNotes(a)) || txt(a.notes, b.notes),   // first click = whoever wrote something
+    }[r.sort] || ((a, b) => ord.get(a) - ord.get(b));
+    // ties fall back to the original order, so sorting is stable and repeatable
+    g.rows.sort((a, b) => (primary(a, b) * r.dir) || (ord.get(a) - ord.get(b)));
+  });
+  return groups;
+}
+
+/** Everything on screen, flattened — what the Download button writes out. */
+function rtVisible() { return rtGroups().reduce((all, g) => all.concat(g.rows), []); }
+
+/* The toolbar is built once and then left alone, so typing in the search box is never interrupted. */
+function renderResultsTools() {
+  const r = S.results, tools = $('#results-tools');
+  let h = '<input class="input" id="rt-q" type="search" placeholder="Search name, workout or notes" aria-label="Search results" value="' + esc(r.q) + '">';
+  if (CONFIG.DIVISIONS.length) h += '<div class="seg seg--sm" role="group" aria-label="Group">' +
+    [''].concat(CONFIG.DIVISIONS).map(v => '<button data-ract="sex" data-v="' + esc(v) + '" type="button" aria-pressed="' + (r.sex === v) + '">' + (v ? esc(v) : 'All') + '</button>').join('') + '</div>';
+  if (r.rows.length) h += '<button class="btn-ghost btn-sm" data-ract="dl" type="button">Download</button>';
+  h += '<p class="rt-count" id="rt-count"></p>';
+  tools.innerHTML = h;
+  tools.hidden = false;
+}
+
+function renderResults() {
+  const r = S.results; if (!r || !r.loaded) return;
+  if ($('#results-tools').hidden && r.rows.length) renderResultsTools();   // nothing to filter on an empty day
+  const groups = rtGroups(), shown = groups.reduce((n, g) => n + g.rows.length, 0), total = r.rows.length;
+  const athletes = new Set([].concat.apply([], groups.map(g => g.rows)).map(x => x.user_id || x.athlete)).size;
+  const caret = r.dir < 0 ? '▼' : '▲';
+
+  $('#results-tools').querySelectorAll('[data-ract="sex"]').forEach(b => b.setAttribute('aria-pressed', String((b.dataset.v || '') === r.sex)));
+  const count = $('#rt-count');
+  if (count) count.innerHTML = !total ? '' :
+    '<b>' + shown + '</b> ' + (shown === 1 ? 'result' : 'results') +
+    ' · <b>' + athletes + '</b> ' + (athletes === 1 ? 'athlete' : 'athletes') +
+    ' · <b>' + groups.length + '</b> of ' + new Set(r.rows.map(x => x.section_key)).size + ' workouts' +
+    (shown < total ? ' · ' + (total - shown) + ' hidden by the filter' : '');
+
+  if (!total) { $('#results-bd').innerHTML = '<p class="empty">No one logged a result on this day yet.</p>'; return; }
+  if (!groups.length) { $('#results-bd').innerHTML = '<p class="empty">Nothing matches that search.</p>'; return; }
+
+  const head = '<thead><tr>' + RT_COLS.map(c =>
+    '<th scope="col"' + (r.sort === c.k ? ' aria-sort="' + (r.dir < 0 ? 'descending' : 'ascending') + '"' : '') + '>' +
+    '<button data-ract="sort" data-k="' + c.k + '" type="button">' + c.label +
+    '<span class="rt-caret" aria-hidden="true">' + caret + '</span></button></th>').join('') + '</tr></thead>';
+
+  $('#results-bd').innerHTML = groups.map(g =>
+    '<section class="rt-grp">' +
+      '<div class="rt-grp-hd"><span class="rt-grp-key">' + esc(g.key) + '</span>' +
+        '<h3 class="rt-grp-t">' + esc(g.title || 'Workout') + '</h3>' +
+        '<span class="rt-grp-n">' + g.rows.length + ' logged</span></div>' +
+      '<div class="rt-wrap"><table class="rt">' + head + '<tbody>' + g.rows.map(x => {
+        const notes = String(x.notes || '').trim();
+        return '<tr>' +
+          '<td class="rt-name">' + esc(x.athlete || 'Athlete') + '</td>' +
+          '<td class="rt-sex">' + (x.gender ? esc(x.gender) : '<span class="rt-none">—</span>') + '</td>' +
+          '<td class="rt-res">' + (x.result ? esc(x.result) : '<span class="rt-none">—</span>') +
+            (x.level ? '<span class="rt-lvl" data-v="' + esc(x.level) + '">' + esc(x.level) + '</span>' : '') + '</td>' +
+          '<td class="rt-notes">' + (notes ? esc(notes) : '<span class="rt-none">—</span>') + '</td></tr>';
+      }).join('') + '</tbody></table></div></section>').join('');
+}
+
+async function onResultsClick(e) {
+  const q = e.target.closest('#rt-q');
+  if (q) return;
+  const t = e.target.closest('[data-ract]'); if (!t) return;
+  const r = S.results; if (!r) return;
+  switch (t.dataset.ract) {
+    case 'retry': $('#results-bd').innerHTML = '<div class="loading">Loading</div>'; return loadResults();
+    case 'sex': r.sex = t.dataset.v || ''; return renderResults();
+    case 'sort': {
+      const k = t.dataset.k;
+      if (r.sort === k) r.dir = -r.dir; else { r.sort = k; r.dir = 1; }
+      return renderResults();
+    }
+    case 'dl': return downloadResults(t);
+  }
+}
+
+/** Downloads exactly what's on screen — the filter and sort you're looking at. */
+async function downloadResults(btn) {
+  const r = S.results, rows = rtVisible();
+  if (!rows.length) return toast('Nothing to download', 'error');
+  const name = 'HERD results ' + r.day;
+  btn.disabled = true;
+  try {
+    if (!window.XLSX) await loadScript(CONFIG.XLSX_URL);
+    downloadDayXlsx(window.XLSX, rows, name + '.xlsx');
+    toast('Downloaded ' + rows.length + (rows.length === 1 ? ' result' : ' results'));
+  } catch (e) {
+    downloadDayCsv(rows, name + '.csv');
+    toast('Excel unavailable, downloaded CSV');
+  }
+  btn.disabled = false;
 }
 
 /* ── Leaderboard ─────────────────────────────────────── */
