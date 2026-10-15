@@ -212,11 +212,13 @@
 
       // ── Export: coaches get everyone. Athletes get what they can see (own + public boards);
       //    pass { userId: api-user-id } to export only your own. ──
-      /** Every result logged on one day, for a spreadsheet: one row per athlete per workout, workouts in program order, athletes A–Z.
-       *  Row: { day, section_key, workout, athlete, gender, result, level }. Coaches get everyone; others only what they can see. */
+      /** Every result logged on one day: one row per athlete per workout, workouts in program order, athletes A–Z.
+       *  Row: { day, section_key, workout, athlete, gender, result, level, notes, user_id }.
+       *  Feeds both the file export (which uses DAY_EXPORT_COLUMNS and ignores notes) and the
+       *  coach's "View daily results" table (which shows them). Coaches get everyone; others only what they can see. */
       exportDay: member(async function (day) {
         const [lb, sets, secs] = await Promise.all([
-          wrap(db.from('leaderboard').select('score_id, day, section_key, section_title, score_type, level, display_name, division, display').eq('track', track).eq('day', day)),
+          wrap(db.from('leaderboard').select('score_id, day, section_key, section_title, score_type, level, display_name, division, display, notes, user_id').eq('track', track).eq('day', day)),
           wrap(db.from('scores').select('id, sets').eq('track', track).eq('day', day)),
           wrap(db.from('program_sections').select('key, position, title').eq('track', track).eq('day', day)),
         ]);
@@ -269,9 +271,11 @@
         _pos: sec ? sec.position : 1e6,
         day: r.day, section_key: r.section_key,
         workout: r.section_key + ': ' + ((sec && sec.title) || r.section_title || ''),
+        title: (sec && sec.title) || r.section_title || '', score_type: r.score_type || '',
         athlete: r.display_name || '', gender: r.division || '',
         result: resultText(r.score_type, r.display, setsById[r.score_id]),
         level: UNRANKED[r.score_type] ? '' : (r.level === 'scaled' ? 'Scaled' : 'RX'),
+        notes: r.notes || '', user_id: r.user_id || null,   // shown in the coach's table; not an export column
       };
     }).sort((a, b) => a._pos - b._pos || String(a.section_key).localeCompare(String(b.section_key)) || a.athlete.localeCompare(b.athlete, undefined, { sensitivity: 'base' }))
       .map(r => { delete r._pos; return r; });
